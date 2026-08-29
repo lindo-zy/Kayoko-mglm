@@ -35,6 +35,9 @@ NS_ASSUME_NONNULL_BEGIN
 - (NSString *)actionAccessibilityLabelKeyForItem:(KayokoPasteboardItem *)item;
 - (nullable id)activityItemForPreviewItem:(KayokoPasteboardItem *)item;
 - (void)updateShareButtonState;
+- (void)configureEditButton;
+- (void)setEditButtonHidden:(BOOL)hidden;
+- (void)handleEditButtonPressed;
 @end
 
 NS_ASSUME_NONNULL_END
@@ -56,6 +59,10 @@ NS_ASSUME_NONNULL_END
                    addTarget:self
                       action:@selector(handleShareButtonPressed)
             forControlEvents:UIControlEventTouchUpInside];
+        [[[_previewView headerView] editButton]
+                   addTarget:self
+                      action:@selector(handleEditButtonPressed)
+            forControlEvents:UIControlEventTouchUpInside];
         [self setView:_previewView];
     }
     return self;
@@ -66,6 +73,7 @@ NS_ASSUME_NONNULL_END
 - (void)showPreviewWithItem:(KayokoPasteboardItem *)item sourceHistoryKey:(NSString *)sourceHistoryKey {
     [self setPreviewItem:item];
     [self setSourceHistoryKey:sourceHistoryKey];
+    [[self previewView] setUserInteractionEnabled:YES];
 
     if (![[item imageName] isEqualToString:@""]) {
         NSData *imageData = [[NSFileManager defaultManager]
@@ -79,7 +87,6 @@ NS_ASSUME_NONNULL_END
     }
     KayokoHeaderView *headerView = [[self previewView] headerView];
     [headerView setHidden:NO];
-    // Preview shows a title + back button; the clipboard/favorites switcher is meaningless here.
     [headerView setHistorySwitcherVisible:NO animated:NO];
     [headerView setTitleText:[[self previewView] name]];
     [headerView updateStyleForButton:[headerView leadingButton]
@@ -110,6 +117,7 @@ NS_ASSUME_NONNULL_END
         setAccessibilityLabel:[[KayokoPasteboardManager localizationBundle] localizedStringForKey:@"Share"
                                                                                             value:nil
                                                                                             table:@"Tweak"]];
+    [self configureEditButton];
     [self updateShareButtonState];
 }
 
@@ -158,6 +166,59 @@ NS_ASSUME_NONNULL_END
     [shareButton setAlpha:enabled ? 1.0 : 0.35];
 }
 
+- (void)configureEditButton {
+    if (![self canEditPreviewText]) {
+        [self setEditButtonHidden:YES];
+        return;
+    }
+
+    KayokoHeaderView *headerView = [[self previewView] headerView];
+    [headerView updateStyleForButton:[headerView editButton]
+                       withImageName:@"square.and.pencil"
+                           imageSize:kKayokoBackButtonImageSize
+                           tintColor:[UIColor labelColor]];
+    [[headerView editButton]
+        setAccessibilityLabel:[[KayokoPasteboardManager localizationBundle] localizedStringForKey:@"Edit"
+                                                                                            value:nil
+                                                                                            table:@"Tweak"]];
+    [self setEditButtonHidden:NO];
+    [self setEditButtonEnabled:YES];
+}
+
+- (void)setEditButtonHidden:(BOOL)hidden {
+    UIButton *editButton = [[[self previewView] headerView] editButton];
+    [editButton setHidden:hidden];
+    if (hidden) {
+        [editButton setEnabled:NO];
+        [editButton setAlpha:0];
+    }
+}
+
+- (void)setEditButtonEnabled:(BOOL)enabled {
+    UIButton *editButton = [[[self previewView] headerView] editButton];
+    [editButton setEnabled:enabled];
+    [editButton setAlpha:(enabled && ![editButton isHidden]) ? 1.0 : 0.35];
+}
+
+- (BOOL)canEditPreviewText {
+    KayokoPasteboardItem *item = [self previewItem];
+    return item && [[item imageName] length] == 0 && [[self sourceHistoryKey] length] > 0;
+}
+
+- (void)handleEditButtonPressed {
+    if (![self canEditPreviewText]) {
+        return;
+    }
+
+    UIButton *editButton = [[[self previewView] headerView] editButton];
+    if ([editButton isHidden] || ![editButton isEnabled]) {
+        return;
+    }
+
+    [self setEditButtonEnabled:NO];
+    [[self delegate] previewViewControllerDidRequestEdit:self];
+}
+
 - (void)handleShareButtonPressed {
     id activityItem = [self activityItemForPreviewItem:[self previewItem]];
     if (!activityItem || [[self previewView] isHidden]) {
@@ -200,6 +261,8 @@ NS_ASSUME_NONNULL_END
 - (void)hidePreview {
     [[self activitySharePresenter] dismissActivityAnimated:NO];
     [[[[self previewView] headerView] shareButton] setHidden:YES];
+    [self setEditButtonHidden:YES];
+    [[self previewView] setUserInteractionEnabled:YES];
     [self setPreviewItem:nil];
 
     [[self previewView] reset];
@@ -210,7 +273,9 @@ NS_ASSUME_NONNULL_END
     [[self activitySharePresenter] dismissActivityAnimated:NO];
     [[self previewView] reset];
     [[self previewView] setHidden:YES];
+    [[self previewView] setUserInteractionEnabled:YES];
     [[[[self previewView] headerView] shareButton] setHidden:YES];
+    [self setEditButtonHidden:YES];
     [self setPreviewItem:nil];
     [self setSourceHistoryKey:nil];
 }

@@ -312,15 +312,9 @@ NS_ASSUME_NONNULL_END
     if (snapHeight <= 0) {
         return;
     }
-    // If the user is actively scrolling (e.g. pulling the search bar down during an async filter
-    // load), never fight their gesture — leave the offset alone. This closes the race where a bar
-    // that was hidden at capture time is being revealed by hand while the reload lands.
     if ([self isTracking] || [self isDragging] || [self isDecelerating]) {
         return;
     }
-    // Caller guarantees the search bar was hidden before the reload. A shorter reloaded list can
-    // clamp the content offset below the search bar and reveal it, so restore it to the hidden
-    // position. Because the bar was already off-screen, this reposition is imperceptible — no snap.
     [UIView performWithoutAnimation:^{
       UIEdgeInsets contentInset = [self contentInset];
       CGFloat requiredBottomInset =
@@ -408,7 +402,6 @@ NS_ASSUME_NONNULL_END
         [self setBackgroundColor:[UIColor clearColor]];
         [self setClipsToBounds:YES];
         [self setAlwaysBounceVertical:YES];
-        // Keep scroll indicators inside the rounded floating card.
         if (@available(iOS 11.1, *)) {
             [self setVerticalScrollIndicatorInsets:UIEdgeInsetsMake(4, 0, 8, 2)];
         }

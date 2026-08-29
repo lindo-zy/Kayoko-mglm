@@ -131,10 +131,6 @@ NS_ASSUME_NONNULL_END
     return NSNotFound;
 }
 
-// Removes the item shown at displayedIndex and keeps the raw items list in sync. Unlike setItems:,
-// this preserves an active filter's displayedItems (setItems: does not recompute displayedItems
-// while a filter is active), so swipe-to-delete cannot leave the table's row count out of sync
-// with the data source.
 - (BOOL)removeDisplayedItemAtIndex:(NSUInteger)displayedIndex {
     if (displayedIndex >= [[self displayedItems] count]) {
         return NO;
@@ -149,7 +145,6 @@ NS_ASSUME_NONNULL_END
     if (itemIndex != NSNotFound) {
         NSMutableArray<NSDictionary<NSString *, id> *> *items = [[self items] mutableCopy];
         [items removeObjectAtIndex:itemIndex];
-        // Assign the ivar directly so the manually maintained displayedItems above is preserved.
         _items = [items copy];
     }
     return YES;
@@ -243,6 +238,54 @@ NS_ASSUME_NONNULL_END
 
     BOOL matchesSearch = [self dictionaryMatchesSearchText:updatedDictionary];
     BOOL matchesTag = [self displayedItemWithTagUUID:tagUUID matchesSearchCriteria:[self searchCriteria]];
+    if (!matchesSearch || !matchesTag) {
+        NSMutableArray<NSDictionary<NSString *, id> *> *displayedItems = [[self displayedItems] mutableCopy];
+        [displayedItems removeObjectAtIndex:displayedIndex];
+        [self setDisplayedItems:displayedItems];
+        return KayokoTableDataStoreDisplayedItemUpdateRemove;
+    }
+
+    NSMutableArray<NSDictionary<NSString *, id> *> *displayedItems = [[self displayedItems] mutableCopy];
+    displayedItems[displayedIndex] = updatedDictionary;
+    [self setDisplayedItems:displayedItems];
+    return KayokoTableDataStoreDisplayedItemUpdateReload;
+}
+
+- (KayokoTableDataStoreDisplayedItemUpdate)replaceContent:(NSString *)content
+                                 forItemMatchingDictionary:(NSDictionary<NSString *, id> *)dictionary
+                                        displayedItemIndex:(NSUInteger *)displayedItemIndex {
+    if (displayedItemIndex) {
+        *displayedItemIndex = NSNotFound;
+    }
+    if (!dictionary || [content length] == 0) {
+        return KayokoTableDataStoreDisplayedItemUpdateNotFound;
+    }
+
+    NSUInteger itemIndex = [self indexOfItemMatchingDictionary:dictionary inItems:[self items]];
+    if (itemIndex == NSNotFound) {
+        return KayokoTableDataStoreDisplayedItemUpdateNotFound;
+    }
+
+    NSMutableDictionary<NSString *, id> *updatedDictionary = [[self items][itemIndex] mutableCopy];
+    updatedDictionary[kKayokoItemKeyContent] = content;
+    BOOL hasLink = [content hasPrefix:@"http://"] || [content hasPrefix:@"https://"];
+    updatedDictionary[kKayokoItemKeyHasLink] = @(hasLink);
+
+    NSMutableArray<NSDictionary<NSString *, id> *> *items = [[self items] mutableCopy];
+    items[itemIndex] = updatedDictionary;
+    [self setItems:items];
+
+    NSUInteger displayedIndex = [self indexOfItemMatchingDictionary:dictionary inItems:[self displayedItems]];
+    if (displayedIndex == NSNotFound) {
+        return KayokoTableDataStoreDisplayedItemUpdateNotFound;
+    }
+    if (displayedItemIndex) {
+        *displayedItemIndex = displayedIndex;
+    }
+
+    BOOL matchesSearch = [self dictionaryMatchesSearchText:updatedDictionary];
+    BOOL matchesTag = [self displayedItemWithTagUUID:updatedDictionary[kKayokoItemKeyTagUUID]
+                                matchesSearchCriteria:[self searchCriteria]];
     if (!matchesSearch || !matchesTag) {
         NSMutableArray<NSDictionary<NSString *, id> *> *displayedItems = [[self displayedItems] mutableCopy];
         [displayedItems removeObjectAtIndex:displayedIndex];

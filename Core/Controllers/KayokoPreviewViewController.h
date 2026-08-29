@@ -6,12 +6,18 @@
 #import <UIKit/UIKit.h>
 
 @class KayokoPreviewView;
+@class KayokoPreviewViewController;
 @class KayokoPasteboardItem;
 
 NS_ASSUME_NONNULL_BEGIN
 
+@protocol KayokoPreviewViewControllerDelegate <NSObject>
+- (void)previewViewControllerDidRequestEdit:(KayokoPreviewViewController *)controller;
+@end
+
 @interface KayokoPreviewViewController : UIViewController
 
+@property(nonatomic, weak, nullable) id<KayokoPreviewViewControllerDelegate> delegate;
 @property(nonatomic, strong, readonly) KayokoPreviewView *previewView;
 @property(nonatomic, copy, nullable, readonly) NSString *sourceHistoryKey;
 @property(nonatomic, strong, nullable, readonly) KayokoPasteboardItem *previewItem;
@@ -19,6 +25,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 - (void)showPreviewWithItem:(KayokoPasteboardItem *)item sourceHistoryKey:(NSString *)sourceHistoryKey;
 - (void)handleActionButtonWithCompletion:(nullable void (^)(BOOL success))completion;
+- (void)setEditButtonEnabled:(BOOL)enabled;
 - (void)hidePreview;
 - (void)resetPreviewState;
 - (void)scrollToTopAnimated:(BOOL)animated;

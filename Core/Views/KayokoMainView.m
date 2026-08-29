@@ -59,8 +59,6 @@
         [self setContentBottomConstraints:[[NSMutableArray alloc] init]];
         [self setContentSafeAreaBottomConstraints:[[NSMutableArray alloc] init]];
 
-        // Tight floating-card shadow: small edge gaps make large soft shadows look washed out.
-        // Keep it compact and a bit denser so the card still reads against the background.
         [[self layer] setShadowColor:[[UIColor blackColor] CGColor]];
         [[self layer] setShadowOffset:CGSizeMake(0, 1)];
         [[self layer] setShadowRadius:8];
@@ -71,11 +69,9 @@
         [[self layer] setCornerRadius:kKayokoPanelCornerRadiusFallback];
         [self setClipsToBounds:NO];
 
-        // Real frosted glass: blur must stay transparent so underlying UI shows through.
         [self setBackgroundColor:[UIColor clearColor]];
         [self setOpaque:NO];
 
-        // Clip all panel content to continuous rounded corners while keeping outer shadow.
         [self setChromeClipView:[[UIView alloc] initWithFrame:self.bounds]];
         [[self chromeClipView] setBackgroundColor:[UIColor clearColor]];
         [[self chromeClipView] setOpaque:NO];
@@ -105,7 +101,6 @@
         [[[self blurEffectView] layer] setCornerRadius:kKayokoPanelCornerRadiusFallback];
         [[self chromeClipView] addSubview:[self blurEffectView]];
 
-        // Soft luminance lift so light-mode glass reads bright/transparent instead of muddy gray.
         [self setMaterialTintView:[[UIView alloc] initWithFrame:CGRectZero]];
         [[self materialTintView] setUserInteractionEnabled:NO];
         [[[self blurEffectView] contentView] addSubview:[self materialTintView]];
@@ -295,8 +290,6 @@
 - (CGFloat)safeAreaBottomInsetForContentView:(nullable UIView *)contentView {
     UIView *referenceView = contentView ?: self;
     if (contentView && [contentView isDescendantOfView:[self contentContainerView]]) {
-        // Content transitions temporarily offset installed content views; the safe-area overlap belongs to the
-        // stable content container.
         referenceView = [self contentContainerView];
     }
 
@@ -744,7 +737,6 @@
 
 - (UIBlurEffectStyle)preferredPanelBlurStyle {
     if (@available(iOS 13.0, *)) {
-        // Thin material keeps glass translucent while remaining brighter than ultra-thin gray fills.
         return [self prefersDarkPanelMaterial] ? UIBlurEffectStyleSystemThinMaterialDark
                                                : UIBlurEffectStyleSystemThinMaterialLight;
     }
@@ -753,10 +745,8 @@
 
 - (UIColor *)preferredMaterialTintColor {
     if ([self prefersDarkPanelMaterial]) {
-        // Slight cool lift in dark mode so the sheet does not become a flat charcoal slab.
         return [UIColor colorWithWhite:1.0 alpha:0.06];
     }
-    // Light mode: brighten the frosted glass toward the reference translucent white card.
     return [UIColor colorWithWhite:1.0 alpha:0.34];
 }
 
@@ -768,7 +758,6 @@
 }
 
 - (CGFloat)resolvedPanelCornerRadius {
-    // Prefer Apple's private display corner radius (continuous/squircle corners).
     CGFloat radius = 0;
     UIScreen *screen = self.window.windowScene.screen ?: [UIScreen mainScreen];
     @try {
@@ -782,13 +771,11 @@
     } @catch (__unused NSException *exception) {
         radius = 0;
     }
-
-    // Fallback for older devices / failed KVC: approximate continuous device radius.
     if (radius < 20.0) {
         UIWindow *window = self.window;
         UIEdgeInsets insets = window ? window.safeAreaInsets : UIEdgeInsetsZero;
         if (insets.bottom > 0) {
-            radius = 55.0; // modern iPhone continuous corner ballpark
+            radius = 55.0;
         } else if (insets.top > 20.0) {
             radius = 47.0;
         } else {
@@ -796,8 +783,6 @@
         }
     }
 
-    // Floating sheet is inset from the screen edge, so slightly reduce the device radius
-    // to keep the visual curvature harmonious with the device bezel.
     radius = MAX(radius - 3.0, 28.0);
     return radius;
 }
@@ -830,7 +815,6 @@
         [[[self blurEffectView] layer] setCornerCurve:kCACornerCurveContinuous];
     }
 
-    // Outer view keeps radius for shadow path; clip view actually clips children.
     CACornerMask cornerMask =
         kCALayerMinXMinYCorner | kCALayerMaxXMinYCorner | kCALayerMinXMaxYCorner | kCALayerMaxXMaxYCorner;
     [[self layer] setCornerRadius:radius];
@@ -846,8 +830,6 @@
     [[[self blurEffectView] layer] setMasksToBounds:YES];
     [[self contentContainerView] setClipsToBounds:YES];
 
-    // Continuous corners are not exact circular arcs, but a rounded shadow path is still
-    // dramatically cheaper than forcing Core Animation to recompute soft shadows every frame.
     UIBezierPath *path = [UIBezierPath bezierPathWithRoundedRect:self.bounds cornerRadius:radius];
     [[self layer] setShadowPath:path.CGPath];
     [self setCachedChromeBoundsSize:boundsSize];
@@ -856,7 +838,6 @@
 
 - (void)didMoveToWindow {
     [super didMoveToWindow];
-    // Window/screen changes can change the preferred device corner radius.
     [self setHasCachedChromeAppearance:NO];
     [self setNeedsLayout];
 }

@@ -832,6 +832,31 @@ forPasteboardItem:(KayokoPasteboardItem *)item
                       completion:completion];
 }
 
+- (void)replaceContent:(NSString *)content
+     forPasteboardItem:(KayokoPasteboardItem *)item
+      inHistoryWithKey:(NSString *)historyKey
+            completion:(void (^)(BOOL success))completion {
+    if (_maintenanceMode) {
+        if (completion) {
+            completion(NO);
+        }
+        return;
+    }
+
+    if (!item || [historyKey length] == 0 || [content length] == 0) {
+        if (completion) {
+            completion(NO);
+        }
+        return;
+    }
+
+    NSDictionary<NSString *, id> *dictionary = [item dictionaryRepresentation];
+    [_historyRepository replaceContent:content
+                    forItemDictionary:dictionary
+                         inHistoryKey:historyKey
+                           completion:completion];
+}
+
 - (void)removeAllPasteboardItemsFromHistoryWithKey:(NSString *)historyKey
                                 shouldRemoveImages:(BOOL)shouldRemoveImages
                            postsChangeNotification:(BOOL)postsChangeNotification

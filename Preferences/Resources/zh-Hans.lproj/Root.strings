@@ -71,7 +71,7 @@
 "The data was imported successfully. Restart SpringBoard now to finish the import and continue using Kayoko." = "数据已成功导入。你需要立即重启 SpringBoard，才能完成导入并继续使用 Kayoko。";
 "The network request failed." = "网络请求失败。";
 "The “Prediction Bar” method displays custom suggestions on the “More Keyboard Keyplane” (123)." = "“预测栏” 方法在 “更多键盘 (123)” 上显示自定义建议。";
-"This build was modified by mlgm based on the OwnGoal Studio edition." = "当前版本由 mlgm 基于「乌龙工作室」版进行二次修改";
+"This build was modified by mlgm based on the OwnGoal Studio edition." = "当前版本由 mlgm 基于 Kayoko (乌龙版本) 进行修改";
 "This option requires restarting SpringBoard to apply. Do you want to restart now?" = "此选项需要重新启动 SpringBoard 才能生效。你现在要重新启动吗？";
 "Tools" = "工具";
 "Touch Outside to Dismiss" = "触摸外部收起";
@@ -79,6 +79,9 @@
 "Try out your changes by typing, copying and pasting text." = "尝试输入、拷贝和粘贴文本以查看效果。";
 "Custom" = "自定义";
 "Maximum" = "至高无上";
+"Enter Value" = "输入数值";
+"Value Range: %ld - %ld" = "范围：%ld - %ld";
+"Confirm" = "确定";
 "Reference values: Status Bar 999, Lock Screen 1050, Control Center 1080, Screenshots 1115, Recording Indicator 1120/1125, System Alerts 2000." = "参考值：状态栏 999、锁屏 1050、控制中心 1080、截图 1115、录制指示器 1120/1125、系统警告 2000。";
 "View Level" = "视图层级";
 "View Priority" = "视图优先级";

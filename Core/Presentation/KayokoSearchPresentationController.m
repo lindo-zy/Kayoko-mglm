@@ -245,8 +245,6 @@ NS_ASSUME_NONNULL_END
 }
 
 - (CGFloat)hiddenSearchHeaderOffsetForTableView:(KayokoHistoryListView *)tableView {
-    // Only the search bar is scrolled out of view while browsing; a visible favorites
-    // filter panel stays pinned below by keeping the hidden offset at the search bar height.
     return [self searchHeaderHeight];
 }
 
@@ -309,7 +307,6 @@ NS_ASSUME_NONNULL_END
     CGFloat inset = kKayokoPanelFloatingInset;
     CGRect referenceFrame = [self hasNormalFrameBeforeSearch] ? [self normalFrameBeforeSearch] : [containerView frame];
 
-    // Preserve floating-card width/x. Never expand portrait search to full host bounds.
     CGFloat width = CGRectGetWidth(referenceFrame);
     CGFloat x = CGRectGetMinX(referenceFrame);
     if (width <= 0.0 || width >= CGRectGetWidth(bounds) - 1.0) {
@@ -324,7 +321,6 @@ NS_ASSUME_NONNULL_END
         preferredHeight = MAX(preferredHeight, 220.0);
     }
 
-    // Sit the card above the keyboard with the same edge gap as the floating chrome.
     CGFloat availableBottom = CGRectGetMaxY(bounds) - MAX(hostKeyboardBottomInset, 0.0) - inset;
     CGFloat maxHeight = MAX(availableBottom - inset, 220.0);
     CGFloat height = MIN(preferredHeight, maxHeight);
@@ -423,8 +419,6 @@ NS_ASSUME_NONNULL_END
 }
 
 - (CGRect)fullscreenFrame {
-    // Historical name: "expanded" search frame. Portrait keeps the floating card and only
-    // repositions it above the keyboard; it no longer expands to the host bounds.
     return [self activeSearchFrame];
 }
 
@@ -502,19 +496,12 @@ NS_ASSUME_NONNULL_END
     [self revealSearchBarInTableView:activeTableView animated:YES];
 
     UIView *containerView = [self containerView];
-    // If the system keyboard is already docked (common when opening search while typing),
-    // seed its inset immediately so the card can animate above the keyboard instead of jumping.
     [self seedHostKeyboardBottomInsetFromVisibleKeyboardIfNeeded];
 
-    // Portrait search stays a floating card (IMG_0644). Only reveal the search bar and
-    // lift the card above an already-visible keyboard; never go edge-to-edge.
     CGRect targetFrame = [self activeSearchFrame];
     BOOL needsFrameAnimation = !CGRectEqualToRect([containerView frame], targetFrame) ||
                                !CGAffineTransformIsIdentity([containerView transform]);
     if (!needsFrameAnimation) {
-        // First open usually keeps the same floating-card frame. Skip a no-op spring that
-        // still forces blur/shadow/layout work and feels like a hitch. Defer completion by one
-        // turn so the search-bar reveal can start before token bootstrap work runs.
         if (completion) {
             dispatch_async(dispatch_get_main_queue(), completion);
         }
@@ -832,7 +819,6 @@ NS_ASSUME_NONNULL_END
     withAnimationParametersFromNotification:(NSNotification *)notification {
     CGFloat hostKeyboardBottomInset = MAX(keyboardBottomInset, 0);
     BOOL usesPortraitCard = [self usesPortraitCardSearchPresentation];
-    // Portrait card sits above the keyboard, so list content does not need keyboard padding.
     CGFloat contentKeyboardBottomInset = usesPortraitCard ? 0 : hostKeyboardBottomInset;
     BOOL hostInsetUnchanged = fabs([self hostKeyboardBottomInset] - hostKeyboardBottomInset) <= 0.5;
     BOOL contentInsetUnchanged = fabs([self keyboardBottomInset] - contentKeyboardBottomInset) <= 0.5;
@@ -849,8 +835,6 @@ NS_ASSUME_NONNULL_END
     UIViewAnimationOptions options = (UIViewAnimationOptions)(curve << 16) |
                                      UIViewAnimationOptionBeginFromCurrentState |
                                      UIViewAnimationOptionAllowUserInteraction;
-    // When the keyboard is already visible, iOS often reports duration 0 for the focus handoff
-    // into the search field. Still animate the card lift so it does not hard-jump.
     BOOL needsPortraitFrameAnimation = usesPortraitCard && !frameUnchanged;
     if (needsPortraitFrameAnimation && duration <= 0.01) {
         duration = kKayokoSearchFullscreenAnimationDuration;

@@ -23,6 +23,7 @@ static CGFloat const kKayokoSegmentBottomInset = 10;
 @property(nonatomic, strong, readwrite) UILabel *titleLabel;
 @property(nonatomic, strong, readwrite) UIControl *titleTapControl;
 @property(nonatomic, strong, readwrite) UIButton *leadingButton;
+@property(nonatomic, strong, readwrite) UIButton *editButton;
 @property(nonatomic, strong) UIStackView *trailingButtonStack;
 @property(nonatomic, strong, readwrite) UIButton *trailingButton;
 @property(nonatomic, strong, readwrite) UIButton *alternateTrailingButton;
@@ -75,7 +76,6 @@ static CGFloat const kKayokoSegmentBottomInset = 10;
 
         _historySegmentedControl = [[UISegmentedControl alloc] initWithItems:@[ clipboardTitle, favoritesTitle ]];
         [_historySegmentedControl setSelectedSegmentIndex:0];
-        // Compact system-like control: soft gray track + bright selected pill.
         [_historySegmentedControl setBackgroundColor:[UIColor colorWithWhite:0.55 alpha:0.22]];
         if (@available(iOS 13.0, *)) {
             [_historySegmentedControl setSelectedSegmentTintColor:[UIColor colorWithWhite:1.0 alpha:1.0]];
@@ -91,8 +91,7 @@ static CGFloat const kKayokoSegmentBottomInset = 10;
             NSForegroundColorAttributeName : [UIColor colorWithWhite:0.08 alpha:1.0],
             NSFontAttributeName : selectedFont
         }
-                                               forState:UIControlStateSelected];
-        // Remove default heavy borders for a cleaner floating-sheet look.
+                                         forState:UIControlStateSelected];
         [_historySegmentedControl setDividerImage:[[UIImage alloc] init]
                               forLeftSegmentState:UIControlStateNormal
                                 rightSegmentState:UIControlStateNormal
@@ -112,6 +111,11 @@ static CGFloat const kKayokoSegmentBottomInset = 10;
         [_selectionActionButton setHidden:YES];
         [_trailingButtonStack addArrangedSubview:_selectionActionButton];
         [_selectionActionButton setTranslatesAutoresizingMaskIntoConstraints:NO];
+
+        _editButton = [[UIButton alloc] init];
+        [_editButton setHidden:YES];
+        [_trailingButtonStack addArrangedSubview:_editButton];
+        [_editButton setTranslatesAutoresizingMaskIntoConstraints:NO];
 
         _alternateTrailingButton = [[UIButton alloc] init];
         [_alternateTrailingButton setHidden:YES];
@@ -144,7 +148,6 @@ static CGFloat const kKayokoSegmentBottomInset = 10;
             [[_grabber widthAnchor] constraintEqualToConstant:42],
             [[_grabber heightAnchor] constraintEqualToConstant:14],
 
-            // Keep controls below the grabber with clear breathing room.
             [[_leadingButton bottomAnchor] constraintEqualToAnchor:[self bottomAnchor]
                                                           constant:-kKayokoSegmentBottomInset],
             [[_leadingButton centerXAnchor] constraintEqualToAnchor:[self leadingAnchor]
@@ -163,6 +166,8 @@ static CGFloat const kKayokoSegmentBottomInset = 10;
             [[_trailingButtonStack centerYAnchor] constraintEqualToAnchor:[_leadingButton centerYAnchor]],
             [[_trailingButtonStack trailingAnchor] constraintEqualToAnchor:[self trailingAnchor] constant:-16],
             [[_trailingButtonStack heightAnchor] constraintEqualToConstant:32],
+            [[_editButton widthAnchor] constraintEqualToConstant:32],
+            [[_editButton heightAnchor] constraintEqualToConstant:32],
             [[_selectionActionButton widthAnchor] constraintEqualToConstant:32],
             [[_selectionActionButton heightAnchor] constraintEqualToConstant:32],
             [[_alternateTrailingButton widthAnchor] constraintEqualToConstant:32],

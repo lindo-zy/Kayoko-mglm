@@ -13,7 +13,6 @@
 #import "KayokoSystemTranslationPresenter.h"
 #import "KayokoWordSelectionView.h"
 
-// Word selection creates one button per token; CJK text can approach one token per character.
 static NSUInteger const kKayokoWordSelectionMaximumTextLength = 5000;
 
 static NSString *kayokoWordSelectionTextByTrimmingBoundaryNewlines(NSString *text) {
@@ -66,6 +65,10 @@ NS_ASSUME_NONNULL_END
                    addTarget:self
                       action:@selector(handleShareButtonPressed)
             forControlEvents:UIControlEventTouchUpInside];
+        [[[_wordSelectionView headerView] editButton]
+                   addTarget:self
+                      action:@selector(handleEditButtonPressed)
+            forControlEvents:UIControlEventTouchUpInside];
         _activitySharePresenter = [[KayokoActivitySharePresenter alloc] init];
         [self setView:_wordSelectionView];
 
@@ -87,6 +90,10 @@ NS_ASSUME_NONNULL_END
 
 - (NSString *)selectedText {
     return [[self wordSelectionView] selectedText];
+}
+
+- (NSRange)selectedTextRangeInOriginalText {
+    return [[self wordSelectionView] selectedTextRangeInOriginalText];
 }
 
 - (BOOL)isShowingWordSelection {
@@ -120,8 +127,6 @@ NS_ASSUME_NONNULL_END
 
     KayokoHeaderView *headerView = [[self wordSelectionView] headerView];
     [headerView setHidden:NO];
-    // This transient screen shows a title + back button; the clipboard/favorites switcher is
-    // meaningless here.
     [headerView setHistorySwitcherVisible:NO animated:NO];
     [headerView setTitleText:[self name]];
     [headerView updateStyleForButton:[headerView leadingButton]
@@ -163,6 +168,7 @@ NS_ASSUME_NONNULL_END
         setAccessibilityLabel:[[KayokoPasteboardManager localizationBundle] localizedStringForKey:@"Share"
                                                                                             value:nil
                                                                                             table:@"Tweak"]];
+    [self configureEditButton];
     [self updateSelectionOrderButtonState];
     [self updateActionButtonState];
     [self updateSelectionActionButtonStates];
@@ -263,10 +269,57 @@ NS_ASSUME_NONNULL_END
     [[self activitySharePresenter] dismissActivityAnimated:NO];
     [[[[self wordSelectionView] headerView] translationButton] setHidden:YES];
     [[[[self wordSelectionView] headerView] shareButton] setHidden:YES];
+    [self setEditButtonHidden:YES];
     [[self wordSelectionView] setHidden:YES];
+    [[self wordSelectionView] setUserInteractionEnabled:YES];
     [[self wordSelectionView] reset];
     [self setSourceItem:nil];
     [self setSourceHistoryKey:nil];
+}
+
+#pragma mark - Edit
+
+- (void)configureEditButton {
+    KayokoHeaderView *headerView = [[self wordSelectionView] headerView];
+    [headerView updateStyleForButton:[headerView editButton]
+                       withImageName:@"square.and.pencil"
+                           imageSize:kKayokoBackButtonImageSize
+                           tintColor:[UIColor labelColor]];
+    [[headerView editButton]
+        setAccessibilityLabel:[[KayokoPasteboardManager localizationBundle] localizedStringForKey:@"Edit"
+                                                                                            value:nil
+                                                                                            table:@"Tweak"]];
+    [self setEditButtonHidden:NO];
+    [self setEditButtonEnabled:YES];
+}
+
+- (void)setEditButtonHidden:(BOOL)hidden {
+    UIButton *editButton = [[[self wordSelectionView] headerView] editButton];
+    [editButton setHidden:hidden];
+    if (hidden) {
+        [editButton setEnabled:NO];
+        [editButton setAlpha:0];
+    }
+}
+
+- (void)setEditButtonEnabled:(BOOL)enabled {
+    UIButton *editButton = [[[self wordSelectionView] headerView] editButton];
+    [editButton setEnabled:enabled];
+    [editButton setAlpha:(enabled && ![editButton isHidden]) ? 1.0 : 0.35];
+}
+
+- (void)handleEditButtonPressed {
+    if (![self isShowingWordSelection] || ![self sourceItem] || [[self sourceHistoryKey] length] == 0) {
+        return;
+    }
+
+    UIButton *editButton = [[[self wordSelectionView] headerView] editButton];
+    if ([editButton isHidden] || ![editButton isEnabled]) {
+        return;
+    }
+
+    [self setEditButtonEnabled:NO];
+    [[self delegate] wordSelectionViewControllerDidRequestEdit:self];
 }
 
 #pragma mark - Header
@@ -289,7 +342,6 @@ NS_ASSUME_NONNULL_END
     UIButton *selectionOrderButton = [[[self wordSelectionView] headerView] alternateTrailingButton];
     BOOL enabled = [self usesSelectionOrderForSelectedText];
     NSString *preferredImageName = enabled ? @"123.rectangle.fill" : @"123.rectangle";
-    // `123.rectangle` is unavailable on iOS 14 and would otherwise fall back to the generic document icon.
     NSString *imageName = [UIImage systemImageNamed:preferredImageName] ? preferredImageName : @"textformat.123";
     [[[self wordSelectionView] headerView]
         updateStyleForButton:selectionOrderButton

@@ -144,8 +144,6 @@ NS_ASSUME_NONNULL_END
                                                   format:(int)format
                                                    scale:(CGFloat)scale {
     NSString *effectiveBundleIdentifier = [bundleIdentifier length] > 0 ? bundleIdentifier : @"com.apple.WebSheet";
-    // IconServices already caches this lookup; retaining another copy here would keep placeholder images stale after
-    // the corresponding application becomes available.
     UIImage *icon = [UIImage _applicationIconImageForBundleIdentifier:effectiveBundleIdentifier
                                                                format:format
                                                                 scale:scale];

@@ -50,7 +50,6 @@ static NSString *const kKayokoCopyVaultDataDirectoryPath = @"/var/mobile/Documen
         return;
     }
 
-    // Keep the overlay attached so a cancelled interactive pop can fade it back in.
     _externalImportOverlayHiddenForNavigation = YES;
     [_externalImportOverlayView animateDisappearanceWithCompletion:nil];
 }

@@ -46,8 +46,6 @@ typedef void (*KayokoSnapperFloatInvocation)(id target, SEL selector, CGRect rec
         [windows addObjectsFromArray:applicationWindows];
     }
 
-    // SpringBoard has used scenes since iOS 13. Include scene windows as a fallback because
-    // -windows can omit windows belonging to a background scene during a transition.
     for (UIScene *scene in [[UIApplication sharedApplication] connectedScenes]) {
         if (![scene isKindOfClass:[UIWindowScene class]]) {
             continue;
@@ -121,8 +119,6 @@ typedef void (*KayokoSnapperFloatInvocation)(id target, SEL selector, CGRect rec
     CGSize imageSize = CGSizeMake(imageWidth, imageHeight);
 
     UIGraphicsImageRendererFormat *format = [UIGraphicsImageRendererFormat preferredFormat];
-    // Snapper owns the outer rounded clipping and shadow. Keep the crop opaque and use one
-    // uniform card color so anti-aliased source corners cannot expose a black or white backing.
     [format setOpaque:YES];
     UIGraphicsImageRenderer *renderer = [[UIGraphicsImageRenderer alloc] initWithSize:imageSize format:format];
     return [renderer imageWithActions:^(UIGraphicsImageRendererContext *_Nonnull rendererContext) {
@@ -184,9 +180,6 @@ typedef void (*KayokoSnapperFloatInvocation)(id target, SEL selector, CGRect rec
 + (CGFloat)topSafeAreaInsetForWindow:(UIWindow *)window {
     CGFloat topInset = [window safeAreaInsets].top;
 
-    // Snapper is a SpringBoard window. During some transitions its own safe-area value can
-    // briefly be zero, while an application scene still has the correct device inset.
-    // Take the largest valid inset from windows on the same screen as a conservative fallback.
     UIScreen *screen = [window screen];
     NSMutableOrderedSet<UIWindow *> *windows = [[NSMutableOrderedSet alloc] init];
     NSArray<UIWindow *> *applicationWindows = [[UIApplication sharedApplication] windows];
@@ -264,9 +257,6 @@ typedef void (*KayokoSnapperFloatInvocation)(id target, SEL selector, CGRect rec
     return canvas;
 }
 
-// Snapper owns the outer Snap view and its shadow. Its public-facing entry point does not
-// expose a corner-radius parameter, so normalize only the newly-created Snap image view.
-// The source image remains a plain opaque rectangle; this avoids a second, baked-in radius.
 + (void)normalizeSnapperAppearanceForWindow:(UIWindow *)window {
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.25 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
       @try {
@@ -309,9 +299,6 @@ typedef void (*KayokoSnapperFloatInvocation)(id target, SEL selector, CGRect rec
         return NO;
     }
 
-    // Snapper 3 exposes this Objective-C method but no public SDK. Keep it isolated behind
-    // runtime checks and an exception boundary so a removed or incompatible Snapper never
-    // affects Kayoko's own history actions.
     @try {
         KayokoSnapperFloatInvocation invocation = (KayokoSnapperFloatInvocation)[window methodForSelector:selector];
         if (!invocation) {

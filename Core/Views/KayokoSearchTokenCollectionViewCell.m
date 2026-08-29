@@ -78,8 +78,6 @@ static CGFloat const kKayokoSearchTokenCellDotBorderWidth = 1.25;
 
 - (void)setActiveFilterHighlighted:(BOOL)activeFilterHighlighted {
     _activeFilterHighlighted = activeFilterHighlighted;
-    // Highlight the active filter chip with a soft tinted pill so the current selection is obvious
-    // without relying on the search bar tokens, which stay hidden while the list is scrolled.
     if (activeFilterHighlighted) {
         [[self contentView] setBackgroundColor:[[UIColor systemBlueColor] colorWithAlphaComponent:0.16]];
         [[self titleLabel] setTextColor:[UIColor systemBlueColor]];

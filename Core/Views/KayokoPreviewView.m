@@ -66,6 +66,8 @@ static CGFloat const kKayokoPreviewImageMaximumZoomMultiplier = 4.0;
         [[self textView] setEditable:NO];
         [[self textView] setSelectable:NO];
         [[self textView] setAutomaticallyAdjustsScrollIndicatorInsets:NO];
+        [[self textView] setContentInsetAdjustmentBehavior:UIScrollViewContentInsetAdjustmentNever];
+        [[self textView] setTextColor:[UIColor labelColor]];
         [[self textView] setDelegate:self];
         [[self textView] setTextContainerInset:UIEdgeInsetsMake(8, 16, 8, 16)];
         [[[self textView] textContainer] setLineFragmentPadding:0];
@@ -158,8 +160,7 @@ static CGFloat const kKayokoPreviewImageMaximumZoomMultiplier = 4.0;
 
     UIEdgeInsets indicatorInsets = UIEdgeInsetsMake(0, 0, bottomInset, 0);
     [[self textView] setVerticalScrollIndicatorInsets:indicatorInsets];
-    [(KayokoEdgeFadingTextView *)[self textView]
-        setEdgeFadeInsets:UIEdgeInsetsMake(0, 0, [self keyboardBottomInset], 0)];
+    [(KayokoEdgeFadingTextView *)[self textView] setEdgeFadeInsets:UIEdgeInsetsZero];
 }
 
 - (void)updateImageScrollInsets {
@@ -275,8 +276,6 @@ static CGFloat const kKayokoPreviewImageMaximumZoomMultiplier = 4.0;
 
     [self updateImageScrollInsets];
 
-    // During the fullscreen collapse, Auto Layout updates the nested scroll view one pass after this view's bounds.
-    // Use the viewport implied by this view and its header so the final zoom does not inherit stale geometry.
     CGSize viewportSize = [self imageViewportSizeForCurrentLayout];
     CGFloat bottomInset = [[self imageScrollView] contentInset].bottom;
     BOOL layoutSizeChanged = !CGSizeEqualToSize(viewportSize, [self imageScrollViewLayoutSize]);

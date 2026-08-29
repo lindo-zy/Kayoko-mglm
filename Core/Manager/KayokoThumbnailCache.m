@@ -116,7 +116,6 @@ static NSUInteger const kKayokoThumbnailContainerPayloadLimit = 32 * 1024 * 1024
         return nil;
     }
 
-    // ImageIO accepts some truncated JPEGs, so validate the complete payload before decoding it.
     if ([containerData length] < kKayokoThumbnailContainerHeaderLength) {
         [_fileManager removeItemAtPath:cachePath error:nil];
         return nil;
@@ -333,7 +332,6 @@ static NSUInteger const kKayokoThumbnailContainerPayloadLimit = 32 * 1024 * 1024
         return;
     }
 
-    // Stored image files are write-once and migrations rename collisions, so disk validation can stay off this path.
     NSString *requestKey = [self requestKeyForImageName:imageName targetSize:targetSize scale:scale];
     if (![self enqueueCompletion:completion forRequestKey:requestKey]) {
         return;
@@ -379,7 +377,6 @@ static NSUInteger const kKayokoThumbnailContainerPayloadLimit = 32 * 1024 * 1024
           [_requestLock unlock];
 
           if (shouldPersist) {
-              // Bound optional writes so rapid scrolling cannot retain an unbounded set of decoded images.
               dispatch_async(_writeQueue, ^{
                 [self persistThumbnailImage:thumbnailImage atPath:cachePath];
                 [_requestLock lock];

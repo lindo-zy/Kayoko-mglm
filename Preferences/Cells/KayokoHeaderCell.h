@@ -11,7 +11,6 @@ NS_ASSUME_NONNULL_BEGIN
 @property(nonatomic, strong) UIImageView *iconImageView;
 @property(nonatomic, strong) UILabel *headerTitleLabel;
 @property(nonatomic, strong) UILabel *subtitleLabel;
-@property(nonatomic, strong) UILabel *versionLabel;
 @end
 
 NS_ASSUME_NONNULL_END

@@ -15,7 +15,6 @@ typedef void (^KayokoHistoryItemsCompletion)(NSMutableArray<NSDictionary<NSStrin
 typedef void (^KayokoHistoryAppBundleIdentifiersCompletion)(NSArray<NSString *> *bundleIdentifiers,
                                                             NSError *_Nullable error);
 
-// Serializes all access to KayokoHistoryStore and owns store preparation/migration.
 @interface KayokoHistoryRepository : NSObject
 
 + (NSString *)defaultDatabasePath;
@@ -59,6 +58,10 @@ typedef void (^KayokoHistoryAppBundleIdentifiersCompletion)(NSArray<NSString *> 
 forItemDictionary:(NSDictionary<NSString *, id> *)dictionary
      inHistoryKey:(NSString *)historyKey
        completion:(nullable void (^)(BOOL success))completion;
+- (void)replaceContent:(NSString *)content
+     forItemDictionary:(NSDictionary<NSString *, id> *)dictionary
+          inHistoryKey:(NSString *)historyKey
+            completion:(nullable void (^)(BOOL success))completion;
 - (void)removeItemsFromHistoryKey:(NSString *)historyKey
                shouldRemoveImages:(BOOL)shouldRemoveImages
                        completion:(nullable void (^)(BOOL success))completion;

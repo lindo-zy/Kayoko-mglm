@@ -142,7 +142,6 @@ typedef BOOL (*KayokoSystemTranslationSendBoolean)(id object, SEL selector);
         return YES;
     }
 
-    // The system controller was dismissed without invoking its optional completion handler.
     [self setPresentedController:nil];
     return NO;
 }

@@ -17,6 +17,7 @@ NS_ASSUME_NONNULL_BEGIN
     didRequestHideContainerAfterDirectPaste:(BOOL)directPaste;
 - (void)wordSelectionViewController:(KayokoWordSelectionViewController *)controller
      triggerHapticFeedbackWithStyle:(UIImpactFeedbackStyle)style;
+- (void)wordSelectionViewControllerDidRequestEdit:(KayokoWordSelectionViewController *)controller;
 
 @end
 
@@ -28,6 +29,7 @@ NS_ASSUME_NONNULL_BEGIN
 @property(nonatomic, copy, nullable, readonly) NSString *sourceHistoryKey;
 @property(nonatomic, strong, nullable, readonly) KayokoPasteboardItem *sourceItem;
 @property(nonatomic, copy, readonly) NSString *selectedText;
+@property(nonatomic, assign, readonly) NSRange selectedTextRangeInOriginalText;
 @property(nonatomic, assign, readonly, getter=isShowingWordSelection) BOOL showingWordSelection;
 @property(nonatomic, assign, readonly) BOOL hasSelectedText;
 @property(nonatomic, copy, nullable) void (^selectionChangedHandler)(void);
@@ -44,6 +46,7 @@ NS_ASSUME_NONNULL_BEGIN
                automaticallyPaste:(BOOL)automaticallyPaste;
 - (void)hideWordSelection;
 - (void)handleActionButtonWithAutomaticallyPaste:(BOOL)automaticallyPaste;
+- (void)setEditButtonEnabled:(BOOL)enabled;
 - (void)resetWordSelectionState;
 - (void)updateActionButtonState;
 - (void)scrollToTopAnimated:(BOOL)animated;

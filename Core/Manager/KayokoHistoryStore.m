@@ -65,6 +65,7 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)scheduleRichTextCleanupForName:(NSString *)richTextName;
 - (void)removeRichTextIfUnreferenced:(NSString *)richTextName;
 - (NSInteger)richTextReferenceCountForName:(NSString *)richTextName error:(NSError **)error;
+- (BOOL)historyKey:(NSString *)historyKey containsContent:(NSString *)content error:(NSError **)error;
 @end
 
 NS_ASSUME_NONNULL_END
@@ -554,6 +555,49 @@ forItemDictionary:(NSDictionary<NSString *, id> *)dictionary
                                               error:error];
     }
 
+    if (success) {
+        return [self commitTransactionWithError:error];
+    }
+
+    [self rollbackTransaction];
+    return NO;
+}
+
+- (BOOL)replaceContent:(NSString *)content
+     forItemDictionary:(NSDictionary<NSString *, id> *)dictionary
+          inHistoryKey:(NSString *)historyKey
+                 error:(NSError **)error {
+    NSString *originalContent = [self stringValueFromDictionary:dictionary key:kKayokoItemKeyContent fallback:nil];
+    NSString *updatedContent = [content length] > 0 ? content : nil;
+    if ([originalContent length] == 0 || [updatedContent length] == 0 || [historyKey length] == 0) {
+        return NO;
+    }
+    if ([originalContent isEqualToString:updatedContent]) {
+        return YES;
+    }
+
+    if ([self historyKey:historyKey containsContent:updatedContent error:error]) {
+        [self populateError:error
+                       code:SQLITE_CONSTRAINT
+                    message:KayokoHistoryStoreLocalizedString(@"History item already exists")];
+        return NO;
+    }
+    if (error && *error) {
+        return NO;
+    }
+
+    if (![self beginTransactionWithError:error]) {
+        return NO;
+    }
+
+    NSMutableDictionary<NSString *, id> *updatedDictionary = [dictionary mutableCopy] ?: [NSMutableDictionary dictionary];
+    updatedDictionary[kKayokoItemKeyContent] = updatedContent;
+    BOOL success = [self executeStatement:@"DELETE FROM history_items WHERE history_key = ? AND content = ?"
+                                 bindings:@[ historyKey, originalContent ]
+                                    error:error];
+    if (success) {
+        success = [self upsertItemDictionaryWithoutTransaction:updatedDictionary inHistoryKey:historyKey error:error];
+    }
     if (success) {
         return [self commitTransactionWithError:error];
     }
@@ -1404,6 +1448,31 @@ forItemDictionary:(NSDictionary<NSString *, id> *)dictionary
     [self rollbackTransaction];
     NSString *richTextName = [self stringValueFromDictionary:dictionary key:kKayokoItemKeyRichTextName fallback:@""];
     [self removeRichTextIfUnreferenced:richTextName];
+    return NO;
+}
+
+
+- (BOOL)historyKey:(NSString *)historyKey containsContent:(NSString *)content error:(NSError **)error {
+    if ([historyKey length] == 0 || [content length] == 0) {
+        return NO;
+    }
+
+    sqlite3_stmt *statement = NULL;
+    const char *sql = "SELECT 1 FROM history_items WHERE history_key = ? AND content = ? LIMIT 1";
+    if (![self prepareStatement:sql statement:&statement error:error]) {
+        return NO;
+    }
+
+    sqlite3_bind_text(statement, 1, [historyKey UTF8String], -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(statement, 2, [content UTF8String], -1, SQLITE_TRANSIENT);
+    int stepResult = sqlite3_step(statement);
+    sqlite3_finalize(statement);
+    if (stepResult == SQLITE_ROW) {
+        return YES;
+    }
+    if (stepResult != SQLITE_DONE) {
+        [self populateError:error code:stepResult message:[NSString stringWithUTF8String:sql]];
+    }
     return NO;
 }
 

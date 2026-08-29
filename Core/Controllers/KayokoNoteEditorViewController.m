@@ -136,7 +136,6 @@ NS_ASSUME_NONNULL_BEGIN
     UILabel *headerLabel = [[[self noteEditorView] previewCell] headerLabel];
     [headerLabel setAttributedText:nil];
     [headerLabel setText:displayName];
-    // Keep the text field in sync so a cancelled editor does not flash dirty text again.
     [[[self noteEditorView] textField] setText:[[self item] note] ?: @""];
     [self setSelectedTagUUIDAndUpdateTagBar:[[self item] tagUUID]];
 }
@@ -152,8 +151,6 @@ NS_ASSUME_NONNULL_BEGIN
     [[self noteEditorView] setPreviewCellHeight:cellHeight];
     [[self noteEditorView] setPreviewCell:presentationCell];
     [self configureTagBarForItem:item];
-    // The editor card itself is lifted above the keyboard. Keep the form compact and top-anchored
-    // inside that card instead of giving the editor a keyboard-height spacer of its own.
     [self setCurrentKeyboardBottomInset:MAX(keyboardBottomInset, 0)];
     [[self noteEditorView] setAnchorsEditingContentToTop:YES];
     [[self noteEditorView] setKeyboardBottomInset:0];
@@ -293,8 +290,6 @@ NS_ASSUME_NONNULL_BEGIN
 
 - (void)updateKeyboardBottomInset:(CGFloat)keyboardBottomInset
     withAnimationParametersFromNotification:(NSNotification *)notification {
-    // The compact editor never stores keyboard padding in its view. Track the last delivered
-    // notification separately so a manual keyboard dismissal still moves the card back down.
     keyboardBottomInset = MAX(keyboardBottomInset, 0);
     if (fabs([self currentKeyboardBottomInset] - keyboardBottomInset) <= 0.5) {
         return;

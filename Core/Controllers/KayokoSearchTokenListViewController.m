@@ -244,8 +244,6 @@ NS_ASSUME_NONNULL_END
         [[[self appSectionView] collectionView] reloadData];
     }
 
-    // When only the selection changed (no source change above), the visible chips must still be
-    // reloaded so the active filter's highlight tracks the new criteria.
     if (selectedTokensChanged) {
         if (!tagTokensChanged && !tagLayoutChanged) {
             [[[self tagSectionView] collectionView] reloadData];
@@ -303,12 +301,10 @@ NS_ASSUME_NONNULL_END
 }
 
 - (BOOL)usesHorizontalScrollingLayoutForAppSection {
-    // Filters render on a single horizontally scrolling row to conserve vertical space.
     return YES;
 }
 
 - (BOOL)usesHorizontalScrollingLayoutForTagSection {
-    // Filters render on a single horizontally scrolling row to conserve vertical space.
     return YES;
 }
 

@@ -7,11 +7,8 @@
 
 #import "KayokoSearchTokenCollectionView.h"
 
-static CGFloat const kKayokoSearchTokenSectionHorizontalInset = 24;
-// Section titles are hidden to save vertical space; content alone distinguishes each row.
-static CGFloat const kKayokoSearchTokenSectionTitleHeight = 0;
+static CGFloat const kKayokoSearchTokenSectionHorizontalInset = 24;static CGFloat const kKayokoSearchTokenSectionTitleHeight = 0;
 static CGFloat const kKayokoSearchTokenSectionTitleBottomSpacing = 0;
-// Sized to fit an icon plus roughly four Chinese characters; longer titles truncate with an ellipsis.
 static CGFloat const kKayokoSearchTokenSectionItemWidth = 108;
 static CGFloat const kKayokoSearchTokenSectionItemHeight = 38;
 static CGFloat const kKayokoSearchTokenSectionItemSpacing = 8;

@@ -245,8 +245,6 @@ NS_ASSUME_NONNULL_END
         [preferences integerForKey:kKayokoPreferenceKeyOverlayWindowLevelMode] == kKayokoOverlayWindowLevelModeCustom;
     [levelSpecifier setProperty:@(usesCustomLevel) forKey:@"enabled"];
 
-    // Update the visible custom slider in place. Rebuilding the row here causes
-    // the Settings table to flash when the segmented control changes.
     PSTableCell *cachedCell = [self cachedCellForSpecifier:levelSpecifier];
     if ([cachedCell isKindOfClass:[KayokoSliderCell class]]) {
         [(KayokoSliderCell *)cachedCell setKayokoControlEnabled:usesCustomLevel];
@@ -260,7 +258,6 @@ NS_ASSUME_NONNULL_END
         [self updateOverlayWindowLevelSpecifierAvailability];
     }
 
-    // Prompt to respring for options that require one to apply changes.
     if ([[specifier propertyForKey:@"key"] isEqualToString:kKayokoPreferenceKeyEnabled] ||
         [[specifier propertyForKey:@"key"] isEqualToString:kKayokoPreferenceKeyActivationMethod] ||
         [[specifier propertyForKey:@"key"] isEqualToString:kKayokoPreferenceKeyAutomaticallyPaste]) {
@@ -361,14 +358,9 @@ NS_ASSUME_NONNULL_END
             UITableViewCell *cell = [super tableView:tableView cellForRowAtIndexPath:indexPath];
             NSBundle *bundle = [NSBundle bundleForClass:[self class]];
 
-            // Get the current activation methods
             ActivationMethod currentOptions = [self currentActivationMethod];
-
-            // Get valid values and titles
             NSArray<NSNumber *> *validValues = [specifier propertyForKey:@"validValues"];
             NSArray<NSString *> *validTitles = [specifier propertyForKey:@"validTitles"];
-
-            // Find selected options
             NSMutableArray<NSString *> *selectedTitles = [NSMutableArray array];
             for (NSUInteger i = 0; i < validValues.count; i++) {
                 NSNumber *value = validValues[i];
@@ -376,22 +368,16 @@ NS_ASSUME_NONNULL_END
                     [selectedTitles addObject:[bundle localizedStringForKey:validTitles[i] value:nil table:@"Root"]];
                 }
             }
-
-            // Format the detail text based on the number of selected options
             NSString *detailText;
             if (selectedTitles.count == 1) {
-                // Only one option - display its name
                 detailText = selectedTitles[0];
             } else if (selectedTitles.count == 2) {
-                // Two options - display "Option A and Option B"
                 NSString *format = [bundle localizedStringForKey:@"%@ and %@" value:nil table:@"Root"];
                 detailText = [NSString stringWithFormat:format, selectedTitles[0], selectedTitles[1]];
             } else if (selectedTitles.count > 2) {
-                // Three or more options - display "Option A and X others"
                 NSString *format = [bundle localizedStringForKey:@"%@ and %d others" value:nil table:@"Root"];
                 detailText = [NSString stringWithFormat:format, selectedTitles[0], (int)selectedTitles.count - 1];
             } else {
-                // No options (shouldn't happen)
                 detailText = @"";
             }
 
@@ -415,7 +401,7 @@ NS_ASSUME_NONNULL_END
 
 - (CGFloat)tableView:(UITableView *)tableView heightForHeaderInSection:(NSInteger)section {
     if (section == 0) {
-        return 20.0; // Height for the first section header
+        return 20.0;
     }
     return [super tableView:tableView heightForHeaderInSection:section];
 }

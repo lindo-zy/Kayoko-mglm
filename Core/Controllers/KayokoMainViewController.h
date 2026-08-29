@@ -45,6 +45,7 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)preloadHistoryIfNeeded;
 - (BOOL)isFullscreenSearchActive;
 - (BOOL)isNoteEditing;
+- (BOOL)isPreviewTextEditing;
 - (BOOL)shouldSuppressSystemMultitaskingGesture;
 - (void)show;
 - (void)hide;

@@ -18,8 +18,6 @@
 			<string>Kayoko</string>
 			<key>headerSubtitle</key>
 			<string>Feature-rich clipboard manager for iOS.</string>
-			<key>detail</key>
-			<string>v4.7.2</string>
 			<key>height</key>
 			<integer>92</integer>
 		</dict>
@@ -346,8 +344,6 @@
 			<true/>
 			<key>key</key>
 			<string>OverlayWindowLevel</string>
-			<key>label</key>
-			<string>View Level</string>
 			<key>max</key>
 			<real>2000</real>
 			<key>min</key>
@@ -358,10 +354,6 @@
 			<integer>1990</integer>
 			<key>showValue</key>
 			<true/>
-			<key>showsTopSeparator</key>
-			<true/>
-			<key>titleLabelWidth</key>
-			<integer>88</integer>
 			<key>valueLabelWidth</key>
 			<integer>44</integer>
 		</dict>

@@ -37,6 +37,9 @@ typedef NS_ENUM(NSInteger, KayokoTableDataStoreDisplayedItemUpdate) {
                                                tagUUID:(nullable NSString *)tagUUID
                                 forItemMatchingDictionary:(NSDictionary<NSString *, id> *)dictionary
                                        displayedItemIndex:(NSUInteger *)displayedItemIndex;
+- (KayokoTableDataStoreDisplayedItemUpdate)replaceContent:(NSString *)content
+                                 forItemMatchingDictionary:(NSDictionary<NSString *, id> *)dictionary
+                                        displayedItemIndex:(NSUInteger *)displayedItemIndex;
 
 @end
 

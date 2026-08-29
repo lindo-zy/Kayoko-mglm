@@ -16,7 +16,6 @@ typedef void (^KayokoThumbnailCompletion)(UIImage *_Nullable image);
 - (instancetype)init;
 - (instancetype)initWithCacheDirectoryPath:(NSString *)cacheDirectoryPath NS_DESIGNATED_INITIALIZER;
 
-// Callers must use a new imageName when source contents can change while this cache instance is alive.
 - (void)thumbnailForImageName:(NSString *)imageName
                     imagePath:(NSString *)imagePath
                    targetSize:(CGSize)targetSize

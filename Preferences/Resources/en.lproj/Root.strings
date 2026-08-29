@@ -79,6 +79,9 @@
 "Try out your changes by typing, copying and pasting text." = "Try out your changes by typing, copying and pasting text.";
 "Custom" = "Custom";
 "Maximum" = "Maximum";
+"Enter Value" = "Enter Value";
+"Value Range: %ld - %ld" = "Range: %ld - %ld";
+"Confirm" = "Confirm";
 "Reference values: Status Bar 999, Lock Screen 1050, Control Center 1080, Screenshots 1115, Recording Indicator 1120/1125, System Alerts 2000." = "Reference values: Status Bar 999, Lock Screen 1050, Control Center 1080, Screenshots 1115, Recording Indicator 1120/1125, System Alerts 2000.";
 "View Level" = "View Level";
 "View Priority" = "View Priority";

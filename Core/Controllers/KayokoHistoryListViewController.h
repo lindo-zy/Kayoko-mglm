@@ -76,6 +76,12 @@ NS_ASSUME_NONNULL_BEGIN
             tagUUID:(nullable NSString *)tagUUID
             forItem:(KayokoPasteboardItem *)item
          completion:(nullable void (^)(void))completion;
+- (void)replaceContent:(NSString *)content
+               forItem:(KayokoPasteboardItem *)item
+            completion:(nullable void (^)(void))completion;
+- (void)replaceContent:(NSString *)content
+forItemMatchingDictionary:(NSDictionary<NSString *, id> *)dictionary
+            completion:(nullable void (^)(void))completion;
 - (KayokoTableViewCell *)presentationCellForItem:(KayokoPasteboardItem *)item;
 - (void)setCellPresentationHidden:(BOOL)hidden forItem:(KayokoPasteboardItem *)item;
 - (nullable KayokoTableViewCell *)visibleCellForItem:(KayokoPasteboardItem *)item;

@@ -4,9 +4,8 @@
 
 @implementation KayokoSliderCell {
     UISlider *_slider;
-    UILabel *_titleLabel;
+    UILabel *_customTitleLabel;
     UILabel *_valueLabel;
-    UIView *_topSeparator;
     NSString *_formatString;
     CGFloat _titleLabelWidth;
     CGFloat _valueLabelWidth;
@@ -34,14 +33,14 @@
 
     NSString *title = [specifier name];
     if ([title isKindOfClass:[NSString class]] && [title length] > 0) {
-        _titleLabel = [[UILabel alloc] init];
-        _titleLabel.translatesAutoresizingMaskIntoConstraints = NO;
-        _titleLabel.font = [UIFont systemFontOfSize:17 weight:UIFontWeightRegular];
-        _titleLabel.adjustsFontForContentSizeCategory = NO;
-        _titleLabel.numberOfLines = 1;
-        _titleLabel.lineBreakMode = NSLineBreakByTruncatingTail;
-        _titleLabel.text = title;
-        [self.contentView addSubview:_titleLabel];
+        _customTitleLabel = [[UILabel alloc] init];
+        _customTitleLabel.translatesAutoresizingMaskIntoConstraints = NO;
+        _customTitleLabel.font = [UIFont systemFontOfSize:17 weight:UIFontWeightRegular];
+        _customTitleLabel.adjustsFontForContentSizeCategory = NO;
+        _customTitleLabel.numberOfLines = 1;
+        _customTitleLabel.lineBreakMode = NSLineBreakByTruncatingTail;
+        _customTitleLabel.text = title;
+        [self.contentView addSubview:_customTitleLabel];
     }
 
     _slider = [[UISlider alloc] init];
@@ -59,19 +58,11 @@
         _valueLabel.textColor = [UIColor secondaryLabelColor];
         _valueLabel.numberOfLines = 1;
         _valueLabel.lineBreakMode = NSLineBreakByClipping;
-        // 点击数值可弹出输入框精确设置任意值
         _valueLabel.userInteractionEnabled = YES;
         [_valueLabel addGestureRecognizer:[[UITapGestureRecognizer alloc]
                                               initWithTarget:self
                                                       action:@selector(handleValueLabelTapped)]];
         [self.contentView addSubview:_valueLabel];
-    }
-
-    if ([[specifier propertyForKey:@"showsTopSeparator"] boolValue]) {
-        _topSeparator = [[UIView alloc] init];
-        _topSeparator.translatesAutoresizingMaskIntoConstraints = NO;
-        _topSeparator.backgroundColor = [UIColor separatorColor];
-        [self.contentView addSubview:_topSeparator];
     }
 
     [self _syncWithSpecifier:specifier];
@@ -83,32 +74,21 @@
 
 - (void)layoutSubviews {
     [super layoutSubviews];
-    UIFont *titleFont = [UIFont systemFontOfSize:17 weight:UIFontWeightRegular];
-    self.textLabel.font = titleFont;
-    self.textLabel.adjustsFontForContentSizeCategory = NO;
-    _titleLabel.font = titleFont;
+    self.titleLabel.hidden = YES;
+    self.textLabel.hidden = YES;
 }
 
 - (void)setupConstraints {
     UILayoutGuide *margins = self.layoutMarginsGuide;
     NSLayoutXAxisAnchor *sliderLeadingAnchor = margins.leadingAnchor;
 
-    if (_topSeparator) {
+    if (_customTitleLabel) {
         [NSLayoutConstraint activateConstraints:@[
-            [_topSeparator.leadingAnchor constraintEqualToAnchor:margins.leadingAnchor],
-            [_topSeparator.trailingAnchor constraintEqualToAnchor:margins.trailingAnchor],
-            [_topSeparator.topAnchor constraintEqualToAnchor:self.contentView.topAnchor],
-            [_topSeparator.heightAnchor constraintEqualToConstant:1.0 / [UIScreen mainScreen].scale],
+            [_customTitleLabel.leadingAnchor constraintEqualToAnchor:margins.leadingAnchor],
+            [_customTitleLabel.centerYAnchor constraintEqualToAnchor:self.contentView.centerYAnchor],
+            [_customTitleLabel.widthAnchor constraintEqualToConstant:_titleLabelWidth],
         ]];
-    }
-
-    if (_titleLabel) {
-        [NSLayoutConstraint activateConstraints:@[
-            [_titleLabel.leadingAnchor constraintEqualToAnchor:margins.leadingAnchor],
-            [_titleLabel.centerYAnchor constraintEqualToAnchor:self.contentView.centerYAnchor],
-            [_titleLabel.widthAnchor constraintEqualToConstant:_titleLabelWidth],
-        ]];
-        sliderLeadingAnchor = _titleLabel.trailingAnchor;
+        sliderLeadingAnchor = _customTitleLabel.trailingAnchor;
     }
 
     if (_valueLabel) {
@@ -117,13 +97,13 @@
             [_valueLabel.centerYAnchor constraintEqualToAnchor:self.contentView.centerYAnchor],
             [_valueLabel.widthAnchor constraintEqualToConstant:_valueLabelWidth],
 
-            [_slider.leadingAnchor constraintEqualToAnchor:sliderLeadingAnchor constant:(_titleLabel ? 12.0 : 0.0)],
+            [_slider.leadingAnchor constraintEqualToAnchor:sliderLeadingAnchor constant:(_customTitleLabel ? 12.0 : 0.0)],
             [_slider.trailingAnchor constraintEqualToAnchor:_valueLabel.leadingAnchor constant:-12],
             [_slider.centerYAnchor constraintEqualToAnchor:self.contentView.centerYAnchor],
         ]];
     } else {
         [NSLayoutConstraint activateConstraints:@[
-            [_slider.leadingAnchor constraintEqualToAnchor:sliderLeadingAnchor constant:(_titleLabel ? 12.0 : 0.0)],
+            [_slider.leadingAnchor constraintEqualToAnchor:sliderLeadingAnchor constant:(_customTitleLabel ? 12.0 : 0.0)],
             [_slider.trailingAnchor constraintEqualToAnchor:margins.trailingAnchor],
             [_slider.centerYAnchor constraintEqualToAnchor:self.contentView.centerYAnchor],
         ]];
@@ -180,7 +160,7 @@
 
 - (void)setKayokoControlEnabled:(BOOL)enabled {
     _slider.enabled = enabled;
-    _titleLabel.textColor = enabled ? [UIColor labelColor] : [UIColor tertiaryLabelColor];
+    _customTitleLabel.textColor = enabled ? [UIColor labelColor] : [UIColor tertiaryLabelColor];
     _valueLabel.textColor = enabled ? [UIColor secondaryLabelColor] : [UIColor tertiaryLabelColor];
 }
 
@@ -221,7 +201,6 @@
     }
 }
 
-// 点击数值弹出输入框，可精确设置任意值(限定在 min~max 范围)
 - (void)handleValueLabelTapped {
     if (!_slider.enabled) {
         return;
@@ -233,16 +212,21 @@
         return;
     }
 
+    NSBundle *bundle = [NSBundle bundleForClass:[self class]];
+    NSString *rangeFormat = [bundle localizedStringForKey:@"Value Range: %ld - %ld"
+                                                    value:nil
+                                                    table:@"Root"];
+
     UIAlertController *alert = [UIAlertController
-        alertControllerWithTitle:[[self specifier] name]
-                         message:[NSString stringWithFormat:@"%ld - %ld", (long)minValue, (long)maxValue]
+        alertControllerWithTitle:[bundle localizedStringForKey:@"Enter Value" value:nil table:@"Root"]
+                         message:[NSString stringWithFormat:rangeFormat, (long)minValue, (long)maxValue]
                   preferredStyle:UIAlertControllerStyleAlert];
     [alert addTextFieldWithConfigurationHandler:^(UITextField *textField) {
       [textField setKeyboardType:UIKeyboardTypeNumberPad];
       [textField setText:[NSString stringWithFormat:@"%ld", (long)(NSInteger)_slider.value]];
     }];
     __weak typeof(self) weakSelf = self;
-    [alert addAction:[UIAlertAction actionWithTitle:@"OK"
+    [alert addAction:[UIAlertAction actionWithTitle:[bundle localizedStringForKey:@"Confirm" value:nil table:@"Root"]
                                               style:UIAlertActionStyleDefault
                                             handler:^(UIAlertAction *action) {
                                               __strong typeof(weakSelf) strongSelf = weakSelf;
@@ -255,7 +239,9 @@
                                               [strongSelf updateValueLabel];
                                               [[strongSelf specifier] performSetterWithValue:@(entered)];
                                             }]];
-    [alert addAction:[UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:nil]];
+    [alert addAction:[UIAlertAction actionWithTitle:[bundle localizedStringForKey:@"Cancel" value:nil table:@"Root"]
+                                              style:UIAlertActionStyleCancel
+                                            handler:nil]];
     [controller presentViewController:alert animated:YES completion:nil];
 }
 

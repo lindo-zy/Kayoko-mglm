@@ -362,8 +362,6 @@ NS_ASSUME_NONNULL_END
         return NO;
     }
     UISearchTextField *searchTextField = (UISearchTextField *)textField;
-    // The favorites filter shows its selection through the highlighted filter chips, not the search
-    // bar, so keep the favorites search bar free of filter tokens for consistent behavior.
     if (searchBar == [self favoritesSearchBar]) {
         if ([[searchTextField tokens] count] == 0) {
             return NO;
@@ -386,9 +384,6 @@ NS_ASSUME_NONNULL_END
                              listViewController:(KayokoHistoryListViewController *)listViewController {
     KayokoSearchCriteria *criteria =
         [[listViewController searchCriteria] criteriaByReplacingSearchText:[searchBar text]];
-    // The favorites filter no longer mirrors its selection into the search bar tokens (the filter
-    // chips highlight the active filter instead), so keep the stored filters and only take the
-    // search text from the bar. Reading tokens back here would wipe the filters on every refresh.
     if ([self listViewControllerIsFavorites:listViewController]) {
         return criteria;
     }
@@ -538,9 +533,6 @@ NS_ASSUME_NONNULL_END
     [[self favoritesTokenListViewController] setShowsAppSectionEnabled:[self favoritesFilterShowsApps]];
 }
 
-// When a favorites filter section is hidden (its eye toggle turned off, or the whole panel closed),
-// a selection made in that section would keep filtering the list silently even though the chip is
-// gone. Drop any now-hidden selection so hiding a section restores the corresponding content.
 - (void)pruneFavoritesFilterCriteriaForHiddenSections {
     KayokoHistoryListViewController *favoritesListViewController = [self favoritesListViewController];
     if (!favoritesListViewController) {
@@ -564,10 +556,6 @@ NS_ASSUME_NONNULL_END
 }
 
 - (BOOL)shouldShowTokenListForListViewController:(KayokoHistoryListViewController *)listViewController {
-    // Filters are favorites-only. They stay available during search so remaining categories
-    // can be stacked; each section hides itself once its own token is already selected.
-    // While a search is being torn down (cancel/x), keep them hidden so they never flash during
-    // the exit animation before settling into the final browse state.
     if ([self isEndingSearchTransition]) {
         return NO;
     }
@@ -649,8 +637,6 @@ NS_ASSUME_NONNULL_END
 #pragma mark - Token Loading
 
 - (BOOL)reloadTagTokens {
-    // Prefer the in-memory catalog during interactive search; force disk reloads only when
-    // history/metadata invalidation paths call through here after external changes.
     NSArray<KayokoTag *> *tags = [[KayokoTagCatalog sharedCatalog] reloadTagsForcingDiskRead:NO];
     NSMutableArray<KayokoSearchToken *> *tagTokens = [[NSMutableArray alloc] initWithCapacity:[tags count]];
     for (KayokoTag *tag in tags) {
@@ -777,8 +763,6 @@ NS_ASSUME_NONNULL_END
     [self setSearchRequestIdentifier:[self searchRequestIdentifier] + 1];
 }
 
-// Whether the favorites search bar is hidden right now (search inactive). Captured before a filter
-// reload so we can keep it hidden afterwards without ever disturbing a bar the user pulled down.
 - (BOOL)favoritesSearchBarHiddenBeforeReload:(KayokoHistoryListViewController *)listViewController {
     if ([self isSearchActive] || ![self listViewControllerIsFavorites:listViewController]) {
         return NO;
@@ -786,9 +770,6 @@ NS_ASSUME_NONNULL_END
     return [[listViewController tableView] isSearchBarHiddenAtCurrentContentOffset];
 }
 
-// After a favorites filter reload, restore the search bar to the hidden position — but only if it
-// was hidden before the reload (wasHidden). Selecting a filter must never reveal it just because
-// the filtered list is short; a bar the user deliberately pulled down is left alone.
 - (void)keepFavoritesSearchBarHidden:(BOOL)wasHidden
                 forListViewController:(KayokoHistoryListViewController *)listViewController {
     if (!wasHidden || [self isSearchActive] || ![self listViewControllerIsFavorites:listViewController]) {
@@ -800,10 +781,7 @@ NS_ASSUME_NONNULL_END
 - (void)applySearchCriteria:(KayokoSearchCriteria *)criteria
        toListViewController:(KayokoHistoryListViewController *)listViewController {
     [self cancelPendingTextSearch];
-    // Capture the search bar's hidden state before any reload so a short filtered list can't reveal
-    // it. Selecting a filter only reloads list data — the search bar is a separate surface.
     BOOL searchBarWasHidden = [self favoritesSearchBarHiddenBeforeReload:listViewController];
-    // Favorites filter chips can apply filters even when the search field is inactive.
     if (![self isSearchActive] && ![criteria hasActiveFilters]) {
         [self invalidatePendingSearchRequests];
         if ([listViewController hasActiveSearch] || [listViewController isBrowsingSearchTokens]) {
@@ -930,7 +908,6 @@ NS_ASSUME_NONNULL_END
         [self reloadTagTokens];
     } else if ([self listViewControllerIsFavorites:listViewController] && [self isFavoritesFilterPanelVisible] &&
                ([self favoritesFilterShowsTags] || [self favoritesFilterShowsApps])) {
-        // Browsing favorites with dynamic filters enabled needs tag/app sources loaded up front.
         [self bootstrapSearchTokenSourcesIfNeeded];
     }
     [self syncSearchBarForListViewController:listViewController];
@@ -940,9 +917,6 @@ NS_ASSUME_NONNULL_END
         [[self historySearchBar] setShowsCancelButton:NO animated:NO];
         [[self favoritesSearchBar] setShowsCancelButton:NO animated:NO];
         [[self activeSearchBar] setShowsCancelButton:YES animated:NO];
-        // Restoring focus on the next runloop lets the search bar settle after its text/tokens
-        // were just reset above; a synchronous becomeFirstResponder here races that reset and the
-        // system silently drops the cursor (e.g. after switching the clipboard/favorites tab).
         UISearchBar *searchBarToFocus = [self activeSearchBar];
         __weak typeof(self) weakSelf = self;
         dispatch_async(dispatch_get_main_queue(), ^{
@@ -1025,15 +999,8 @@ NS_ASSUME_NONNULL_END
     }
 
     [self setSearchActive:YES];
-    // Keep search data-state in sync even when the first open is intentionally lightweight.
-    // Empty search must still enter browsingSearchTokens so hasActiveSearch/snap/insert
-    // logic treats the panel as searching (without forcing a full table reload).
     [self applySearchFromSearchBar:[self activeSearchBar]];
-    // Refresh the favorites filter header so it stays available while searching.
     [self updateSearchTokenHeaderHeights];
-    // Keep the first search frame light: cancel button + search bar reveal only.
-    // Token catalog/app icon loading is deferred until after the open animation.
-    // Avoid nested cancel-button layout animation competing with the panel spring.
     [self setSearchBarsShowCancelButton:YES animated:NO];
     [self setDeferredSearchTokenBootstrapPending:YES];
     [[self delegate] searchControllerWillAnimateSearchState:self];
@@ -1108,8 +1075,6 @@ NS_ASSUME_NONNULL_END
                                     [self presentationMode] == KayokoPanelPresentationModeCompactLandscapeFullscreen;
     [self setDeferredSearchTokenBootstrapPending:NO];
     [self setIsResettingSearch:YES];
-    // Suppress the favorites filter panel for the whole exit transition so it does not flash
-    // while the card animates back from the search position.
     [self setIsEndingSearchTransition:YES];
     UISearchBar *activeSearchBar = [self activeSearchBar];
     if (!defersVisibleSearchReset) {
@@ -1252,8 +1217,6 @@ NS_ASSUME_NONNULL_END
     UISearchBar *searchBar = [self searchBarForTableView:[listViewController tableView]];
     KayokoSearchCriteria *baseCriteria =
         [[listViewController searchCriteria] criteriaByReplacingSearchText:[searchBar text]];
-    // Tapping the already-active filter chip clears that filter in place (no keyboard, no search
-    // presentation), so the favorites filter panel can toggle filters on and off by itself.
     KayokoSearchCriteria *criteria = [self criteria:baseCriteria hasActiveToken:token]
                                          ? [baseCriteria criteriaByRemovingToken:token]
                                          : [baseCriteria criteriaBySelectingToken:token];

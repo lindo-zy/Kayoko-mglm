@@ -14,6 +14,7 @@ NS_ASSUME_NONNULL_BEGIN
 @property(nonatomic, strong, readonly) KayokoHeaderView *headerView;
 @property(nonatomic, strong, readonly) UIView *transitionContentView;
 @property(nonatomic, copy, readonly) NSString *selectedText;
+@property(nonatomic, assign, readonly) NSRange selectedTextRangeInOriginalText;
 @property(nonatomic, assign, readonly) BOOL hasTokens;
 @property(nonatomic, assign, readonly) BOOL hasSelectedText;
 @property(nonatomic, assign, readonly) BOOL hasAllTokensSelected;

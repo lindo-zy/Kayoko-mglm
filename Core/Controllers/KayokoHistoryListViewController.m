@@ -328,7 +328,6 @@ NS_ASSUME_NONNULL_END
 
     [[self dataStore] showSearchTokensWithFullListForCriteria:criteria];
     if (alreadyBrowsingFullList || canFlipStateWithoutReload) {
-        // Empty search on the existing full list only needs browsingSearchTokens flipped on.
         [self refreshSearchPlaceholder];
         return;
     }
@@ -460,8 +459,6 @@ NS_ASSUME_NONNULL_END
 }
 
 - (void)removeItemDictionary:(NSDictionary<NSString *, id> *)dictionary {
-    // Resolve the row against the displayed items so the index matches the table (an active filter
-    // makes displayedItems a subset of the raw items).
     NSArray<NSDictionary<NSString *, id> *> *displayedItems = [self displayedItems] ?: @[];
     NSUInteger displayedIndex = [[self dataStore] indexOfItemMatchingDictionary:dictionary inItems:displayedItems];
     if (displayedIndex == NSNotFound) {
@@ -488,8 +485,6 @@ NS_ASSUME_NONNULL_END
 
     [[self tableView]
         performBatchUpdates:^{
-          // Remove via the displayed index so an active filter's displayedItems stays consistent
-          // with the table's row count (a plain setItems: would not update it under a filter).
           [[self dataStore] removeDisplayedItemAtIndex:[indexPath row]];
           [[self tableView] deleteRowsAtIndexPaths:@[ indexPath ] withRowAnimation:UITableViewRowAnimationAutomatic];
         }
@@ -526,6 +521,52 @@ NS_ASSUME_NONNULL_END
                                         tagUUID:tagUUID
                          forItemMatchingDictionary:dictionary
                                 displayedItemIndex:&displayedIndex];
+          if (displayedIndex == NSNotFound) {
+              return;
+          }
+
+          NSIndexPath *indexPath = [NSIndexPath indexPathForRow:displayedIndex inSection:0];
+          if (update == KayokoTableDataStoreDisplayedItemUpdateRemove) {
+              [[self tableView] deleteRowsAtIndexPaths:@[ indexPath ]
+                                      withRowAnimation:UITableViewRowAnimationAutomatic];
+          } else if (update == KayokoTableDataStoreDisplayedItemUpdateReload) {
+              [[self tableView] reloadRowsAtIndexPaths:@[ indexPath ] withRowAnimation:UITableViewRowAnimationNone];
+          }
+        }
+        completion:^(__unused BOOL finished) {
+          [self refreshVisibleItemDetails];
+          [self refreshSearchPlaceholder];
+          if (completion) {
+              completion();
+          }
+        }];
+}
+
+- (void)replaceContent:(NSString *)content
+               forItem:(KayokoPasteboardItem *)item
+            completion:(void (^)(void))completion {
+    [self replaceContent:content
+forItemMatchingDictionary:[item dictionaryRepresentation]
+              completion:completion];
+}
+
+- (void)replaceContent:(NSString *)content
+forItemMatchingDictionary:(NSDictionary<NSString *, id> *)dictionary
+            completion:(void (^)(void))completion {
+    if (!dictionary || [content length] == 0) {
+        if (completion) {
+            completion();
+        }
+        return;
+    }
+    __block KayokoTableDataStoreDisplayedItemUpdate update = KayokoTableDataStoreDisplayedItemUpdateNotFound;
+    __block NSUInteger displayedIndex = NSNotFound;
+
+    [[self tableView]
+        performBatchUpdates:^{
+          update = [[self dataStore] replaceContent:content
+                           forItemMatchingDictionary:dictionary
+                                  displayedItemIndex:&displayedIndex];
           if (displayedIndex == NSNotFound) {
               return;
           }
@@ -791,8 +832,6 @@ NS_ASSUME_NONNULL_END
     [deleteAction setBackgroundColor:[UIColor systemRedColor]];
     [actions addObject:deleteAction];
 
-    // UIKit lays trailing actions out from the end of this array toward the swipe edge.
-    // Keep pin visually to the left of the destructive delete action.
     UIContextualAction *snapperAction = [self snapperActionForItem:item];
     if (snapperAction) {
         [actions addObject:snapperAction];

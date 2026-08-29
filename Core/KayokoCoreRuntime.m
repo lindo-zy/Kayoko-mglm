@@ -289,9 +289,6 @@ NS_ASSUME_NONNULL_END
 }
 
 - (CGRect)portraitPanelFrameInWindow:(nullable UIWindow *)window {
-    // Portrait: bottom floating card (IMG_0634 style).
-    // - left/right/bottom gaps
-    // - height from user preference, NOT full screen
     CGRect bounds = [self referenceBoundsForWindow:window];
     CGFloat inset = kKayokoPanelFloatingInset;
 
@@ -306,8 +303,6 @@ NS_ASSUME_NONNULL_END
 }
 
 - (CGRect)fullscreenPanelFrameInWindow:(UIWindow *)window {
-    // Landscape: nearly full height because vertical space is limited,
-    // but still a floating card with side/top/bottom gaps.
     CGRect bounds = [self referenceBoundsForWindow:window];
     CGFloat inset = kKayokoPanelFloatingInset;
 
@@ -332,7 +327,6 @@ NS_ASSUME_NONNULL_END
     [self.portraitOutsideDismissOverlayView removeFromSuperview];
     UIControl *outsideDismissOverlayView = [[UIControl alloc] initWithFrame:[window bounds]];
     [outsideDismissOverlayView setAutoresizingMask:UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight];
-    // Keep outside dim very light so the floating card blur samples a bright scene and stays transparent.
     [outsideDismissOverlayView setBackgroundColor:[UIColor colorWithWhite:0 alpha:0.06]];
     [outsideDismissOverlayView setAlpha:0];
     [outsideDismissOverlayView setHidden:YES];
@@ -365,8 +359,6 @@ NS_ASSUME_NONNULL_END
     [self createMainViewControllerIfNeeded];
 
     if (![self.mainViewController isHidden]) {
-        // The status-bar window can be recreated when SpringBoard changes scenes. Rebind
-        // the visible card to the current scene instead of leaving the old overlay behind.
         [self preparePanelHostForPresentationMode:[self currentPresentationMode]];
         return;
     }
@@ -379,9 +371,6 @@ NS_ASSUME_NONNULL_END
         return self.customOverlayWindowLevel;
     }
 
-    // UIWindowLevel has no public maximum. Use CGFloat's largest finite value for the
-    // dedicated Kayoko overlay window; the card itself remains bounded and transparent
-    // outside its content.
     return CGFLOAT_MAX;
 }
 
@@ -579,9 +568,8 @@ NS_ASSUME_NONNULL_END
         }
         return;
     }
-
-    // Don't fight transient presentation frames (portrait search above keyboard, note editor, etc.).
-    if ([self.mainViewController isFullscreenSearchActive] || [self.mainViewController isNoteEditing]) {
+    if ([self.mainViewController isFullscreenSearchActive] || [self.mainViewController isNoteEditing] ||
+        [self.mainViewController isPreviewTextEditing]) {
         return;
     }
 
@@ -590,7 +578,6 @@ NS_ASSUME_NONNULL_END
     if (![hostWindow isKindOfClass:[UIWindow class]]) {
         hostWindow = self.statusBarWindow;
     }
-    // Portrait/landscape share floating-card geometry.
     CGRect newFrame = [self portraitPanelFrameInWindow:hostWindow];
     if (!CGRectEqualToRect([panelView frame], newFrame)) {
         if (!CGAffineTransformIsIdentity([panelView transform])) {

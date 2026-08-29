@@ -52,35 +52,8 @@
         [NSLayoutConstraint activateConstraints:@[
             [[[self headerTitleLabel] leadingAnchor] constraintEqualToAnchor:[[self iconImageView] trailingAnchor]
                                                                     constant:13],
-            [[[self headerTitleLabel] topAnchor] constraintEqualToAnchor:[[self iconImageView] topAnchor] constant:1]
-        ]];
-
-        NSString *version = [specifier propertyForKey:@"detail"];
-        UIFont *versionFont = [UIFont systemFontOfSize:11 weight:UIFontWeightMedium];
-        CGFloat versionBadgeWidth =
-            ceil([version sizeWithAttributes:@{NSFontAttributeName : versionFont}].width) + 16.0;
-        [self setVersionLabel:[[UILabel alloc] init]];
-        [[self versionLabel] setText:version];
-        [[self versionLabel] setFont:versionFont];
-        [[self versionLabel] setTextColor:[UIColor secondaryLabelColor]];
-        [[self versionLabel] setTextAlignment:NSTextAlignmentCenter];
-        [[self versionLabel] setBackgroundColor:[[UIColor labelColor] colorWithAlphaComponent:0.07]];
-        [[[self versionLabel] layer] setCornerRadius:7];
-        [[self versionLabel] setClipsToBounds:YES];
-        [[self versionLabel] setContentHuggingPriority:UILayoutPriorityRequired
-                                               forAxis:UILayoutConstraintAxisHorizontal];
-        [[self versionLabel] setContentCompressionResistancePriority:UILayoutPriorityRequired
-                                                             forAxis:UILayoutConstraintAxisHorizontal];
-        [[self contentView] addSubview:[self versionLabel]];
-
-        [[self versionLabel] setTranslatesAutoresizingMaskIntoConstraints:NO];
-        [NSLayoutConstraint activateConstraints:@[
-            [[[self versionLabel] leadingAnchor] constraintEqualToAnchor:[[self headerTitleLabel] trailingAnchor]
-                                                                constant:8],
-            [[[self versionLabel] centerYAnchor] constraintEqualToAnchor:[[self headerTitleLabel] centerYAnchor]],
-            [[[self versionLabel] trailingAnchor] constraintLessThanOrEqualToAnchor:[margins trailingAnchor]],
-            [[[self versionLabel] widthAnchor] constraintGreaterThanOrEqualToConstant:MAX(32.0, versionBadgeWidth)],
-            [[[self versionLabel] heightAnchor] constraintEqualToConstant:18]
+            [[[self headerTitleLabel] topAnchor] constraintEqualToAnchor:[[self iconImageView] topAnchor] constant:1],
+            [[[self headerTitleLabel] trailingAnchor] constraintEqualToAnchor:[margins trailingAnchor]]
         ]];
 
         NSString *subtitleKey = [specifier propertyForKey:@"headerSubtitle"] ?: [specifier propertyForKey:@"subtitle"];

@@ -529,6 +529,33 @@ NS_ASSUME_NONNULL_END
     return [self hasTokens] && [[self selectedTokenIndexes] count] == [[self tokens] count];
 }
 
+
+- (NSRange)selectedTextRangeInOriginalText {
+    if (![self hasSelectedText] || ![self originalText]) {
+        return NSMakeRange(0, [[self originalText] length]);
+    }
+
+    __block NSUInteger location = NSNotFound;
+    __block NSUInteger end = 0;
+    [[self selectedTokenIndexes] enumerateIndexesUsingBlock:^(NSUInteger index, BOOL *stop) {
+      if (index >= [[self tokens] count]) {
+          return;
+      }
+      NSDictionary<NSString *, id> *token = [self tokens][index];
+      NSRange range = [token[@"range"] rangeValue];
+      if (location == NSNotFound || range.location < location) {
+          location = range.location;
+      }
+      NSUInteger tokenEnd = NSMaxRange(range);
+      if (tokenEnd > end) {
+          end = tokenEnd;
+      }
+    }];
+    if (location == NSNotFound) {
+        return NSMakeRange(0, [[self originalText] length]);
+    }
+    return NSMakeRange(location, end - location);
+}
 - (NSString *)selectedText {
     NSMutableString *selectedText = [[NSMutableString alloc] init];
     if (![self usesSelectionOrderForSelectedText]) {

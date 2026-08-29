@@ -7,7 +7,6 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-// Publishes history mutations to in-process observers and the SpringBoard core reload channel.
 @interface KayokoHistoryChangeNotifier : NSObject
 
 - (void)postReloadNotificationWithObject:(nullable id)object;

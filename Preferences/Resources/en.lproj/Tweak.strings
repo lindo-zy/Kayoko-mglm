@@ -32,10 +32,12 @@
 "CopyVault data directory was not found." = "CopyVault data directory was not found.";
 "CopyVault data is invalid: %@" = "CopyVault data is invalid: %@";
 "Dates" = "Dates";
+"Edit" = "Edit";
 "Favorites" = "Favorites";
 "Flights" = "Flights";
 "History" = "History";
 "History item not found" = "History item not found";
+"History item already exists" = "An item with this content already exists";
 "Images" = "Images";
 "Imported file %@ already contains different data." = "Imported file %@ already contains different data.";
 "Imported file data is invalid." = "Imported file data is invalid.";

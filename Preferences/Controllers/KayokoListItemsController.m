@@ -43,23 +43,16 @@
     [tableView deselectRowAtIndexPath:indexPath animated:YES];
 
     NSUInteger selectedIndex = indexPath.row;
-
-    // Check if this option is already selected
     NSNumber *indexNumber = @(selectedIndex);
     if ([_selectedIndices containsObject:indexNumber]) {
-        // If this is the last selected item, don't allow deselection
         if (_selectedIndices.count > 1) {
             [_selectedIndices removeObject:indexNumber];
-        } else {
-            // If only one option is selected, keep it selected
-            [tableView reloadData];
+        } else {            [tableView reloadData];
             return;
         }
     } else {
         [_selectedIndices addObject:indexNumber];
     }
-
-    // Update options
     ActivationMethod newOptions = 0;
     NSArray<NSNumber *> *validValues = [self.specifier propertyForKey:@"validValues"];
     for (NSNumber *index in _selectedIndices) {
@@ -70,8 +63,6 @@
     _currentOptions = newOptions;
     [self setPreferenceValue:@(newOptions) specifier:self.specifier];
     [(PSListController *)self.parentController reloadSpecifiers];
-
-    // Post notification
     CFNotificationCenterPostNotification(CFNotificationCenterGetDarwinNotifyCenter(),
                                          (CFStringRef)kKayokoNotificationKeyPreferencesReload, nil, nil, YES);
 
@@ -80,8 +71,6 @@
 
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
     UITableViewCell *cell = [super tableView:tableView cellForRowAtIndexPath:indexPath];
-
-    // Set selection mark
     if ([_selectedIndices containsObject:@(indexPath.row)]) {
         cell.accessoryType = UITableViewCellAccessoryCheckmark;
     } else {

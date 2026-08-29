@@ -25,8 +25,6 @@ NS_ASSUME_NONNULL_BEGIN
 @property(nonatomic, assign) BOOL showsCategorySectionEnabled;
 @property(nonatomic, assign) BOOL showsTagSectionEnabled;
 @property(nonatomic, assign) BOOL showsAppSectionEnabled;
-// When YES, a section stays visible and highlights the selected chip instead of hiding once its
-// token is selected. Used by the favorites filter so filters can be toggled off in place.
 @property(nonatomic, assign) BOOL keepsSelectedSectionsVisible;
 
 - (void)updateWithSearchCriteria:(KayokoSearchCriteria *)searchCriteria
