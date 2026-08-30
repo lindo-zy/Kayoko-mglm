@@ -649,87 +649,49 @@ NS_ASSUME_NONNULL_END
         return [selectedText copy];
     }
 
-    NSMutableArray<NSDictionary<NSString *, NSNumber *> *> *groups = [[self selectedTokenGroups] mutableCopy];
-    [groups sortUsingComparator:^NSComparisonResult(NSDictionary<NSString *, NSNumber *> *left,
-                                                    NSDictionary<NSString *, NSNumber *> *right) {
-      NSUInteger leftOrder = [left[@"selectionOrder"] unsignedIntegerValue];
-      NSUInteger rightOrder = [right[@"selectionOrder"] unsignedIntegerValue];
-      if (leftOrder != NSUIntegerMax && rightOrder != NSUIntegerMax && leftOrder != rightOrder) {
+    NSMutableArray<NSNumber *> *orderedIndexes = [[NSMutableArray alloc] init];
+    [[self selectedTokenIndexes] enumerateIndexesUsingBlock:^(NSUInteger index, BOOL *stop) {
+      [orderedIndexes addObject:@(index)];
+    }];
+    [orderedIndexes sortUsingComparator:^NSComparisonResult(NSNumber *left, NSNumber *right) {
+      NSUInteger leftIndex = [left unsignedIntegerValue];
+      NSUInteger rightIndex = [right unsignedIntegerValue];
+      NSNumber *leftStoredOrder = [self selectedTokenOrderValues][left];
+      NSNumber *rightStoredOrder = [self selectedTokenOrderValues][right];
+      NSUInteger leftOrder = leftStoredOrder ? [leftStoredOrder unsignedIntegerValue] : NSUIntegerMax;
+      NSUInteger rightOrder = rightStoredOrder ? [rightStoredOrder unsignedIntegerValue] : NSUIntegerMax;
+      if (leftOrder != rightOrder) {
           return leftOrder < rightOrder ? NSOrderedAscending : NSOrderedDescending;
       }
-
-      NSUInteger leftIndex = [left[@"startIndex"] unsignedIntegerValue];
-      NSUInteger rightIndex = [right[@"startIndex"] unsignedIntegerValue];
       if (leftIndex == rightIndex) {
           return NSOrderedSame;
       }
       return leftIndex < rightIndex ? NSOrderedAscending : NSOrderedDescending;
     }];
 
-    for (NSDictionary<NSString *, NSNumber *> *group in groups) {
-        if ([selectedText length] > 0) {
-            [selectedText appendString:@" "];
-        }
-        [self appendSelectedTokenGroup:group toString:selectedText];
-    }
-
-    return [selectedText copy];
-}
-
-- (NSArray<NSDictionary<NSString *, NSNumber *> *> *)selectedTokenGroups {
-    NSMutableArray<NSDictionary<NSString *, NSNumber *> *> *groups = [[NSMutableArray alloc] init];
-    __block NSMutableDictionary<NSString *, NSNumber *> *currentGroup = nil;
-    __block NSUInteger previousTokenIndex = NSNotFound;
-    __block NSRange previousRange = NSMakeRange(NSNotFound, 0);
-
-    [[self selectedTokenIndexes] enumerateIndexesUsingBlock:^(NSUInteger index, BOOL *stop) {
-      NSDictionary<NSString *, id> *token = [self tokens][index];
-      NSRange range = [token[@"range"] rangeValue];
-      BOOL continuesPreviousGroup = currentGroup && previousTokenIndex != NSNotFound &&
-                                    index == previousTokenIndex + 1 && NSMaxRange(previousRange) <= range.location;
-      NSNumber *storedSelectionOrder = [self selectedTokenOrderValues][@(index)];
-      NSUInteger selectionOrder = storedSelectionOrder ? [storedSelectionOrder unsignedIntegerValue] : NSUIntegerMax;
-
-      if (!continuesPreviousGroup) {
-          currentGroup = [@{
-              @"startIndex" : @(index),
-              @"endIndex" : @(index),
-              @"selectionOrder" : @(selectionOrder),
-          } mutableCopy];
-          [groups addObject:currentGroup];
-      } else {
-          currentGroup[@"endIndex"] = @(index);
-          if (selectionOrder < [currentGroup[@"selectionOrder"] unsignedIntegerValue]) {
-              currentGroup[@"selectionOrder"] = @(selectionOrder);
-          }
-      }
-
-      previousTokenIndex = index;
-      previousRange = range;
-    }];
-
-    return groups;
-}
-
-- (void)appendSelectedTokenGroup:(NSDictionary<NSString *, NSNumber *> *)group toString:(NSMutableString *)text {
-    NSUInteger startIndex = [group[@"startIndex"] unsignedIntegerValue];
-    NSUInteger endIndex = [group[@"endIndex"] unsignedIntegerValue];
     NSUInteger previousTokenIndex = NSNotFound;
     NSRange previousRange = NSMakeRange(NSNotFound, 0);
-
-    for (NSUInteger index = startIndex; index <= endIndex && index < [[self tokens] count]; index++) {
+    for (NSNumber *indexValue in orderedIndexes) {
+        NSUInteger index = [indexValue unsignedIntegerValue];
         NSDictionary<NSString *, id> *token = [self tokens][index];
         NSRange range = [token[@"range"] rangeValue];
-        if (previousTokenIndex != NSNotFound && index == previousTokenIndex + 1 &&
-            NSMaxRange(previousRange) <= range.location) {
-            NSRange separatorRange = NSMakeRange(NSMaxRange(previousRange), range.location - NSMaxRange(previousRange));
-            [text appendString:[[self originalText] substringWithRange:separatorRange]];
+        if ([selectedText length] > 0) {
+            if (previousTokenIndex != NSNotFound && index == previousTokenIndex + 1 &&
+                NSMaxRange(previousRange) <= range.location) {
+                NSRange separatorRange =
+                    NSMakeRange(NSMaxRange(previousRange), range.location - NSMaxRange(previousRange));
+                [selectedText appendString:[[self originalText] substringWithRange:separatorRange]];
+            } else {
+                [selectedText appendString:@" "];
+            }
         }
 
-        [text appendString:token[@"text"]];
+        [selectedText appendString:token[@"text"]];
         previousTokenIndex = index;
         previousRange = range;
     }
+
+    return [selectedText copy];
 }
 
 @end
