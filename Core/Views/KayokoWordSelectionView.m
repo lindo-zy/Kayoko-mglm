@@ -7,6 +7,7 @@
 #import "KayokoEdgeFadingScrollView.h"
 #import "KayokoHeaderView.h"
 #import "KayokoMainView.h"
+#import "KayokoPasteboardManager.h"
 #import "KayokoWordSelectionTokenizer.h"
 #import "KayokoWordTokenView.h"
 
@@ -19,6 +20,9 @@ static CGFloat const kKayokoWordSelectionTokenHeight = 34;
 static CGFloat const kKayokoWordSelectionTokenHorizontalInset = 3;
 static CGFloat const kKayokoWordSelectionTokenCornerRadius = 4;
 static CGFloat const kKayokoWordSelectionTokenBorderWidth = 0.5;
+static CGFloat const kKayokoWordSelectionPreviewHeight = 92;
+static CGFloat const kKayokoWordSelectionPreviewCornerRadius = 12;
+static CGFloat const kKayokoWordSelectionPreviewSpacing = 10;
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -27,6 +31,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 @property(nonatomic, strong) KayokoEdgeFadingScrollView *scrollView;
 @property(nonatomic, strong) UIView *contentView;
+@property(nonatomic, strong) UITextView *selectionPreviewTextView;
 @property(nonatomic, strong, readwrite) KayokoHeaderView *headerView;
 @property(nonatomic, strong, readwrite) UIView *transitionContentView;
 
@@ -86,6 +91,33 @@ NS_ASSUME_NONNULL_END
             [[[self transitionContentView] bottomAnchor] constraintEqualToAnchor:[self bottomAnchor]]
         ]];
 
+        [self setSelectionPreviewTextView:[[UITextView alloc] init]];
+        [[self selectionPreviewTextView] setEditable:NO];
+        [[self selectionPreviewTextView] setSelectable:NO];
+        [[self selectionPreviewTextView] setScrollEnabled:YES];
+        [[self selectionPreviewTextView] setAlwaysBounceVertical:NO];
+        [[self selectionPreviewTextView] setAutomaticallyAdjustsScrollIndicatorInsets:NO];
+        [[self selectionPreviewTextView] setContentInsetAdjustmentBehavior:UIScrollViewContentInsetAdjustmentNever];
+        [[self selectionPreviewTextView] setFont:[UIFont systemFontOfSize:16 weight:UIFontWeightRegular]];
+        [[self selectionPreviewTextView] setTextContainerInset:UIEdgeInsetsMake(12, 12, 12, 12)];
+        [[[self selectionPreviewTextView] textContainer] setLineFragmentPadding:0];
+        [[[self selectionPreviewTextView] layer] setCornerRadius:kKayokoWordSelectionPreviewCornerRadius];
+        [[[self selectionPreviewTextView] layer] setBorderWidth:1.0 / [UIScreen mainScreen].scale];
+        [[self transitionContentView] addSubview:[self selectionPreviewTextView]];
+
+        [[self selectionPreviewTextView] setTranslatesAutoresizingMaskIntoConstraints:NO];
+        [NSLayoutConstraint activateConstraints:@[
+            [[[self selectionPreviewTextView] topAnchor] constraintEqualToAnchor:[[self headerView] bottomAnchor]
+                                                                        constant:kKayokoHeaderContentSpacing],
+            [[[self selectionPreviewTextView] leadingAnchor]
+                constraintEqualToAnchor:[[self safeAreaLayoutGuide] leadingAnchor]
+                               constant:kKayokoWordSelectionHorizontalInset],
+            [[[self selectionPreviewTextView] trailingAnchor]
+                constraintEqualToAnchor:[[self safeAreaLayoutGuide] trailingAnchor]
+                               constant:-kKayokoWordSelectionHorizontalInset],
+            [[[self selectionPreviewTextView] heightAnchor] constraintEqualToConstant:kKayokoWordSelectionPreviewHeight]
+        ]];
+
         [self setScrollView:[[KayokoEdgeFadingScrollView alloc] init]];
         [[self scrollView] setEdgeFadeAxis:KayokoEdgeFadeAxisVertical];
         [[self scrollView] setEdgeFadeWidth:kKayokoWordSelectionVerticalFadeHeight];
@@ -98,8 +130,8 @@ NS_ASSUME_NONNULL_END
 
         [[self scrollView] setTranslatesAutoresizingMaskIntoConstraints:NO];
         [NSLayoutConstraint activateConstraints:@[
-            [[[self scrollView] topAnchor] constraintEqualToAnchor:[[self headerView] bottomAnchor]
-                                                          constant:kKayokoHeaderContentSpacing],
+            [[[self scrollView] topAnchor] constraintEqualToAnchor:[[self selectionPreviewTextView] bottomAnchor]
+                                                          constant:kKayokoWordSelectionPreviewSpacing],
             [[[self scrollView] leadingAnchor] constraintEqualToAnchor:[[self safeAreaLayoutGuide] leadingAnchor]],
             [[[self scrollView] trailingAnchor] constraintEqualToAnchor:[[self safeAreaLayoutGuide] trailingAnchor]],
             [[[self scrollView] bottomAnchor] constraintEqualToAnchor:[self bottomAnchor]]
@@ -119,6 +151,8 @@ NS_ASSUME_NONNULL_END
         [self setSelectionGestureRecognizer:selectionGesture];
         [[self contentView] addGestureRecognizer:selectionGesture];
 
+        [self updateSelectionPreviewStyle];
+        [self updateSelectionPreview];
     }
 
     return self;
@@ -150,9 +184,7 @@ NS_ASSUME_NONNULL_END
     }
 
     [self updateButtonStyles];
-    if ([self selectionChangedHandler]) {
-        [self selectionChangedHandler]();
-    }
+    [self notifySelectionChanged];
     [self setNeedsLayout];
 }
 
@@ -172,6 +204,16 @@ NS_ASSUME_NONNULL_END
     [self setNextSelectionOrderValue:0];
     [[self scrollView] setContentOffset:CGPointZero];
     [[self scrollView] setContentSize:CGSizeZero];
+    [self updateSelectionPreview];
+}
+
+- (void)setUsesSelectionOrderForSelectedText:(BOOL)usesSelectionOrderForSelectedText {
+    if (_usesSelectionOrderForSelectedText == usesSelectionOrderForSelectedText) {
+        return;
+    }
+
+    _usesSelectionOrderForSelectedText = usesSelectionOrderForSelectedText;
+    [self updateSelectionPreview];
 }
 
 - (void)scrollToTopAnimated:(BOOL)animated {
@@ -279,6 +321,7 @@ NS_ASSUME_NONNULL_END
 
 - (void)traitCollectionDidChange:(UITraitCollection *)previousTraitCollection {
     [super traitCollectionDidChange:previousTraitCollection];
+    [self updateSelectionPreviewStyle];
     [self updateButtonStyles];
 }
 
@@ -379,9 +422,7 @@ NS_ASSUME_NONNULL_END
 
     [self applySelectedTokenIndexes:updatedIndexes];
     [self updateButtonStyles];
-    if ([self selectionChangedHandler]) {
-        [self selectionChangedHandler]();
-    }
+    [self notifySelectionChanged];
 }
 
 - (BOOL)selectAllTokens {
@@ -397,9 +438,7 @@ NS_ASSUME_NONNULL_END
     }
 
     [self updateButtonStyles];
-    if ([self selectionChangedHandler]) {
-        [self selectionChangedHandler]();
-    }
+    [self notifySelectionChanged];
     return YES;
 }
 
@@ -414,9 +453,7 @@ NS_ASSUME_NONNULL_END
     }
 
     [self updateButtonStyles];
-    if ([self selectionChangedHandler]) {
-        [self selectionChangedHandler]();
-    }
+    [self notifySelectionChanged];
     return YES;
 }
 
@@ -442,9 +479,7 @@ NS_ASSUME_NONNULL_END
     }
 
     [self updateButtonStyles];
-    if ([self selectionChangedHandler]) {
-        [self selectionChangedHandler]();
-    }
+    [self notifySelectionChanged];
 }
 
 - (BOOL)applySelectedTokenIndexes:(NSIndexSet *)updatedIndexes {
@@ -471,6 +506,36 @@ NS_ASSUME_NONNULL_END
 }
 
 #pragma mark - Styling
+
+- (void)updateSelectionPreviewStyle {
+    [[self selectionPreviewTextView] setBackgroundColor:[UIColor secondarySystemBackgroundColor]];
+    [[[self selectionPreviewTextView] layer] setBorderColor:[[UIColor separatorColor] CGColor]];
+}
+
+- (void)updateSelectionPreview {
+    BOOL hasSelectedText = [self hasSelectedText];
+    NSString *text = hasSelectedText
+                         ? [self selectedText]
+                         : [[KayokoPasteboardManager localizationBundle] localizedStringForKey:@"Swipe to select text"
+                                                                                          value:nil
+                                                                                          table:@"Tweak"];
+    [[self selectionPreviewTextView] setText:text ?: @""];
+    [[self selectionPreviewTextView]
+        setTextColor:hasSelectedText ? [UIColor labelColor] : [UIColor tertiaryLabelColor]];
+    [[self selectionPreviewTextView] setContentOffset:CGPointZero animated:NO];
+    [[self selectionPreviewTextView]
+        setAccessibilityLabel:[[KayokoPasteboardManager localizationBundle] localizedStringForKey:@"Selected Text"
+                                                                                             value:nil
+                                                                                             table:@"Tweak"]];
+    [[self selectionPreviewTextView] setAccessibilityValue:hasSelectedText ? text : nil];
+}
+
+- (void)notifySelectionChanged {
+    [self updateSelectionPreview];
+    if ([self selectionChangedHandler]) {
+        [self selectionChangedHandler]();
+    }
+}
 
 - (void)updateButtonStyles {
     UIColor *selectedTextColor = [KayokoWordSelectionView dynamicColorWithLightWhite:0

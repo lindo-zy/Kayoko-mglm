@@ -65,6 +65,7 @@
 "Save to Photos" = "Save to Photos";
 "Search" = "Search";
 "Select All" = "Select All";
+"Selected Text" = "Selected Text";
 "Selection Order" = "Selection Order";
 "Share" = "Share";
 "Spotlight" = "Spotlight";
@@ -72,6 +73,7 @@
 "Tags" = "Tags";
 "Text" = "Text";
 "Translate" = "Translate";
+"Swipe to select text" = "Swipe to select text";
 "Unable to Load History" = "Unable to Load History";
 "Unable to checkpoint history database" = "Unable to checkpoint history database";
 "Unable to import CopyLog data." = "Unable to import CopyLog data.";

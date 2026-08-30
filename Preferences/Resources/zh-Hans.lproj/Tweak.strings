@@ -65,6 +65,7 @@
 "Save to Photos" = "保存到照片";
 "Search" = "搜索";
 "Select All" = "全选";
+"Selected Text" = "已选文本";
 "Selection Order" = "选中顺序";
 "Share" = "分享";
 "Spotlight" = "聚焦";
@@ -72,6 +73,7 @@
 "Tags" = "标签";
 "Text" = "文本";
 "Translate" = "翻译";
+"Swipe to select text" = "滑动选择文字";
 "Unable to Load History" = "无法载入历史记录";
 "Unable to checkpoint history database" = "无法完成历史记录数据库维护";
 "Unable to import CopyLog data." = "无法导入 CopyLog 数据。";
