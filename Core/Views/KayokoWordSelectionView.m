@@ -681,8 +681,6 @@ NS_ASSUME_NONNULL_END
                 NSRange separatorRange =
                     NSMakeRange(NSMaxRange(previousRange), range.location - NSMaxRange(previousRange));
                 [selectedText appendString:[[self originalText] substringWithRange:separatorRange]];
-            } else {
-                [selectedText appendString:@" "];
             }
         }
 
