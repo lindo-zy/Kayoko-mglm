@@ -1,0 +1,90 @@
+name: Build Kayoko roothide
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    tags:
+      - 'v*'
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: kayoko-roothide-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: iOS ${{ matrix.ios }} / SDK ${{ matrix.sdk }}
+    runs-on: macos-14
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - ios: ios16
+            sdk: '16.5'
+          - ios: ios17
+            sdk: '17.0'
+
+    defaults:
+      run:
+        working-directory: .
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup roothide Theos
+        uses: waruhachi/theos-action@v2.4.6
+        with:
+          theos-src: roothide/theos
+          sdks-src: xybp888/iOS-SDKs
+
+      - name: Verify toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -d "${THEOS}"
+          test -d "${THEOS}/sdks/iPhoneOS${{ matrix.sdk }}.sdk"
+          test -x "${THEOS}/bin/ldid" || command -v ldid
+          xcodebuild -version
+          make --version | head -n 1
+          echo "Using THEOS=${THEOS}"
+          echo "Using SDK=${THEOS}/sdks/iPhoneOS${{ matrix.sdk }}.sdk"
+
+      - name: Build roothide package
+        shell: bash
+        env:
+          THEOS_PACKAGE_SCHEME: roothide
+          TARGET: iphone:clang:${{ matrix.sdk }}:14.0
+        run: |
+          set -euo pipefail
+          make clean
+          make package FINALPACKAGE=1
+
+      - name: Verify package
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          packages=(packages/*.deb)
+          if (( ${#packages[@]} == 0 )); then
+            echo 'No Debian package was produced.' >&2
+            exit 1
+          fi
+          for package in "${packages[@]}"; do
+            echo "Produced ${package}"
+            dpkg-deb --info "${package}"
+          done
+
+      - name: Upload Debian package
+        uses: actions/upload-artifact@v4
+        with:
+          name: kayoko-roothide-${{ matrix.ios }}-sdk-${{ matrix.sdk }}
+          path: packages/*.deb
+          if-no-files-found: error
+          retention-days: 14
