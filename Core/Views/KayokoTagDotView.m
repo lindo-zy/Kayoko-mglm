@@ -96,12 +96,15 @@ static CGFloat const kKayokoTagDotDefaultBorderWidth = 1.25;
     [self updateLayerColors];
 }
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
 - (void)traitCollectionDidChange:(UITraitCollection *)previousTraitCollection {
     [super traitCollectionDidChange:previousTraitCollection];
     if ([[self traitCollection] hasDifferentColorAppearanceComparedToTraitCollection:previousTraitCollection]) {
         [self updateLayerColors];
     }
 }
+#pragma clang diagnostic pop
 
 - (void)setDotDiameter:(CGFloat)dotDiameter {
     _dotDiameter = MAX(dotDiameter, 1.0);

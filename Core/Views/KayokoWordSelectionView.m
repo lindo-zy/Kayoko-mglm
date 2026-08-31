@@ -319,11 +319,14 @@ NS_ASSUME_NONNULL_END
     [self updateScrollInsets];
 }
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
 - (void)traitCollectionDidChange:(UITraitCollection *)previousTraitCollection {
     [super traitCollectionDidChange:previousTraitCollection];
     [self updateSelectionPreviewStyle];
     [self updateButtonStyles];
 }
+#pragma clang diagnostic pop
 
 #pragma mark - Gestures
 

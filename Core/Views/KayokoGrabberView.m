@@ -40,10 +40,13 @@
     [self updateLineColor];
 }
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
 - (void)traitCollectionDidChange:(UITraitCollection *)previousTraitCollection {
     [super traitCollectionDidChange:previousTraitCollection];
     [self updateLineColor];
 }
+#pragma clang diagnostic pop
 
 - (void)updateLineColor {
     UIColor *lineColor = [[UIColor labelColor] colorWithAlphaComponent:0.22];

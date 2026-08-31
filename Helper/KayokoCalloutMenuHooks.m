@@ -81,6 +81,8 @@ CHOptimizedMethod2(self, void, _UIEditMenuPresentation, displayMenu, UIMenu *, m
     CHSuper2(_UIEditMenuPresentation, displayMenu, newMenu, configuration, configuration);
 }
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
 CHOptimizedMethod1(self, void, UICalloutBar, setExtraItems, NSArray<UIMenuItem *> *, items) {
     NSMutableArray<UIMenuItem *> *newItems = [NSMutableArray arrayWithCapacity:items.count];
     for (UIMenuItem *item in items) {
@@ -92,6 +94,7 @@ CHOptimizedMethod1(self, void, UICalloutBar, setExtraItems, NSArray<UIMenuItem *
     }
     CHSuper1(UICalloutBar, setExtraItems, [newItems copy]);
 }
+#pragma clang diagnostic pop
 
 CHOptimizedMethod0(self, void, UICalloutBar, updateAvailableButtons) {
     Class cbsbdCls = NSClassFromString(@"_UICalloutBarSystemButtonDescription");

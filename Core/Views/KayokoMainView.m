@@ -713,6 +713,8 @@
 
 #pragma mark - Floating Chrome
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
 - (void)traitCollectionDidChange:(UITraitCollection *)previousTraitCollection {
     [super traitCollectionDidChange:previousTraitCollection];
     if (@available(iOS 13.0, *)) {
@@ -725,6 +727,7 @@
     }
     [self updateFloatingChromeAppearanceForcingRadiusResolution:YES];
 }
+#pragma clang diagnostic pop
 
 
 

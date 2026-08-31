@@ -34,29 +34,31 @@ typedef void (*KayokoSnapperFloatInvocation)(id target, SEL selector, CGRect rec
     return NSClassFromString(kKayokoSnapperWindowClassName);
 }
 
++ (NSArray<UIWindow *> *)applicationWindows {
+    NSMutableOrderedSet<UIWindow *> *windows = [[NSMutableOrderedSet alloc] init];
+    UIApplication *application = [UIApplication sharedApplication];
+
+    for (UIScene *scene in [application connectedScenes]) {
+        if ([scene isKindOfClass:[UIWindowScene class]]) {
+            [windows addObjectsFromArray:[(UIWindowScene *)scene windows]];
+        }
+    }
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+    [windows addObjectsFromArray:[application windows]];
+#pragma clang diagnostic pop
+
+    return [windows array];
+}
+
 + (nullable UIWindow *)snapperWindow {
     Class snapperWindowClass = [self snapperWindowClass];
     if (!snapperWindowClass) {
         return nil;
     }
 
-    NSMutableOrderedSet<UIWindow *> *windows = [[NSMutableOrderedSet alloc] init];
-    NSArray<UIWindow *> *applicationWindows = [[UIApplication sharedApplication] windows];
-    if (applicationWindows) {
-        [windows addObjectsFromArray:applicationWindows];
-    }
-
-    for (UIScene *scene in [[UIApplication sharedApplication] connectedScenes]) {
-        if (![scene isKindOfClass:[UIWindowScene class]]) {
-            continue;
-        }
-        NSArray<UIWindow *> *sceneWindows = [(UIWindowScene *)scene windows];
-        if (sceneWindows) {
-            [windows addObjectsFromArray:sceneWindows];
-        }
-    }
-
-    for (UIWindow *window in windows) {
+    for (UIWindow *window in [self applicationWindows]) {
         if ([window isKindOfClass:snapperWindowClass]) {
             return window;
         }
@@ -181,20 +183,7 @@ typedef void (*KayokoSnapperFloatInvocation)(id target, SEL selector, CGRect rec
     CGFloat topInset = [window safeAreaInsets].top;
 
     UIScreen *screen = [window screen];
-    NSMutableOrderedSet<UIWindow *> *windows = [[NSMutableOrderedSet alloc] init];
-    NSArray<UIWindow *> *applicationWindows = [[UIApplication sharedApplication] windows];
-    if (applicationWindows) {
-        [windows addObjectsFromArray:applicationWindows];
-    }
-    for (UIScene *scene in [[UIApplication sharedApplication] connectedScenes]) {
-        if ([scene isKindOfClass:[UIWindowScene class]]) {
-            NSArray<UIWindow *> *sceneWindows = [(UIWindowScene *)scene windows];
-            if (sceneWindows) {
-                [windows addObjectsFromArray:sceneWindows];
-            }
-        }
-    }
-    for (UIWindow *candidate in windows) {
+    for (UIWindow *candidate in [self applicationWindows]) {
         if (screen && [candidate screen] != screen) {
             continue;
         }

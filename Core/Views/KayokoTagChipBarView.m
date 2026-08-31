@@ -198,10 +198,13 @@ static CGFloat const kKayokoTagChipFloatingProgressDistance = 42;
     [[self textLabel] setFrame:CGRectMake(x, 0, labelWidth, CGRectGetHeight(bounds))];
 }
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
 - (void)traitCollectionDidChange:(UITraitCollection *)previousTraitCollection {
     [super traitCollectionDidChange:previousTraitCollection];
     [self updateStyle];
 }
+#pragma clang diagnostic pop
 
 @end
 
@@ -241,10 +244,13 @@ static CGFloat const kKayokoTagChipFloatingProgressDistance = 42;
     ]];
 }
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
 - (void)traitCollectionDidChange:(UITraitCollection *)previousTraitCollection {
     [super traitCollectionDidChange:previousTraitCollection];
     [self updateGradientColors];
 }
+#pragma clang diagnostic pop
 
 @end
 
@@ -530,6 +536,8 @@ static CGFloat const kKayokoTagChipFloatingProgressDistance = 42;
 
 #pragma mark - Layout
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
 - (void)traitCollectionDidChange:(UITraitCollection *)previousTraitCollection {
     [super traitCollectionDidChange:previousTraitCollection];
     if ([[self traitCollection] hasDifferentColorAppearanceComparedToTraitCollection:previousTraitCollection]) {
@@ -539,6 +547,7 @@ static CGFloat const kKayokoTagChipFloatingProgressDistance = 42;
         }];
     }
 }
+#pragma clang diagnostic pop
 
 - (void)layoutSubviews {
     [super layoutSubviews];
