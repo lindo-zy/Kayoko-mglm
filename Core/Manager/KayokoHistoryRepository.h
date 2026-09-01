@@ -81,6 +81,8 @@ forItemDictionary:(NSDictionary<NSString *, id> *)dictionary
                                                              error:(NSError *_Nullable *_Nullable)error;
 - (void)availableSearchAppBundleIdentifiersWithCompletion:
     (nullable KayokoHistoryAppBundleIdentifiersCompletion)completion;
+- (void)availableSearchAppBundleIdentifiersForHistoryKey:(nullable NSString *)historyKey
+                                              completion:(nullable KayokoHistoryAppBundleIdentifiersCompletion)completion;
 
 @end
 

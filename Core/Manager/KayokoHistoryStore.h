@@ -79,6 +79,8 @@ forItemDictionary:(NSDictionary<NSString *, id> *)dictionary
 - (nullable NSDictionary<NSString *, id> *)latestItemForHistoryKey:(NSString *)historyKey
                                                              error:(NSError *_Nullable *_Nullable)error;
 - (NSArray<NSString *> *)availableSearchAppBundleIdentifiersWithError:(NSError *_Nullable *_Nullable)error;
+- (NSArray<NSString *> *)availableSearchAppBundleIdentifiersForHistoryKey:(nullable NSString *)historyKey
+                                                                      error:(NSError *_Nullable *_Nullable)error;
 - (BOOL)importItemDictionaries:(NSArray<NSDictionary<NSString *, id> *> *)items
                   toHistoryKey:(NSString *)historyKey
                          error:(NSError *_Nullable *_Nullable)error;

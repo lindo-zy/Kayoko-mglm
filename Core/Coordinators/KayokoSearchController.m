@@ -37,7 +37,8 @@ NS_ASSUME_NONNULL_BEGIN
 #pragma mark - Tokens
 
 @property(nonatomic, copy) NSArray<KayokoSearchToken *> *tagTokens;
-@property(nonatomic, copy) NSArray<KayokoSearchToken *> *appTokens;
+@property(nonatomic, copy) NSArray<KayokoSearchToken *> *historyAppTokens;
+@property(nonatomic, copy) NSArray<KayokoSearchToken *> *favoritesAppTokens;
 @property(nonatomic, strong) KayokoApplicationMetadataProvider *metadataProvider;
 
 #pragma mark - State
@@ -53,6 +54,9 @@ NS_ASSUME_NONNULL_BEGIN
 @property(nonatomic, assign) BOOL appTokensDirty;
 @property(nonatomic, assign) BOOL needsAppTokenReloadAfterCurrentLoad;
 @property(nonatomic, assign) NSUInteger appTokenLoadRequestIdentifier;
+@property(nonatomic, assign) NSUInteger pendingAppTokenLoads;
+@property(nonatomic, assign) BOOL appTokenLoadHadError;
+@property(nonatomic, strong, nullable) NSError *appTokenLoadError;
 @property(nonatomic, assign) BOOL deferredSearchTokenBootstrapPending;
 @property(nonatomic, assign, readwrite, getter=isFavoritesFilterPanelVisible) BOOL favoritesFilterPanelVisible;
 @property(nonatomic, assign) BOOL favoritesFilterShowsCategories;
@@ -90,7 +94,8 @@ NS_ASSUME_NONNULL_END
           [weakSelf updateSearchTokenHeaderHeights];
         }];
         _tagTokens = @[];
-        _appTokens = @[];
+        _historyAppTokens = @[];
+        _favoritesAppTokens = @[];
         _metadataProvider = [[KayokoApplicationMetadataProvider alloc] init];
         _appTokensDirty = YES;
         _favoritesFilterPanelVisible = kKayokoPreferenceKeyFavoritesFilterPanelVisibleDefaultValue;
@@ -279,12 +284,13 @@ NS_ASSUME_NONNULL_END
                                   imageName:tokenMetadata[@"image"]];
 }
 
-- (KayokoSearchToken *)selectedAppTokenForCriteria:(KayokoSearchCriteria *)criteria {
+- (KayokoSearchToken *)selectedAppTokenForCriteria:(KayokoSearchCriteria *)criteria
+                                         appTokens:(NSArray<KayokoSearchToken *> *)appTokens {
     NSString *bundleIdentifier = [criteria appBundleIdentifier];
     if ([bundleIdentifier length] == 0) {
         return nil;
     }
-    return [self tokenWithType:kKayokoSearchTokenTypeApp value:bundleIdentifier inTokens:[self appTokens]];
+    return [self tokenWithType:kKayokoSearchTokenTypeApp value:bundleIdentifier inTokens:appTokens];
 }
 
 - (KayokoSearchToken *)selectedTagTokenForCriteria:(KayokoSearchCriteria *)criteria {
@@ -319,7 +325,10 @@ NS_ASSUME_NONNULL_END
     NSArray<KayokoSearchToken *> *tokens = @[
         [self selectedCategoryTokenForCriteria:criteria tokenListController:tokenListController] ?: (id)[NSNull null],
         [self selectedTagTokenForCriteria:criteria] ?: (id)[NSNull null],
-        [self selectedAppTokenForCriteria:criteria] ?: (id)[NSNull null]
+        [self selectedAppTokenForCriteria:criteria
+                                appTokens:(tokenListController == [self favoritesTokenListViewController]
+                                               ? [self favoritesAppTokens]
+                                               : [self historyAppTokens])] ?: (id)[NSNull null]
     ];
     for (id object in tokens) {
         if ([object isKindOfClass:[KayokoSearchToken class]]) {
@@ -525,9 +534,9 @@ NS_ASSUME_NONNULL_END
 }
 
 - (void)applyFavoritesFilterSectionVisibility {
-    [[self historyTokenListViewController] setShowsCategorySectionEnabled:NO];
+    [[self historyTokenListViewController] setShowsCategorySectionEnabled:YES];
     [[self historyTokenListViewController] setShowsTagSectionEnabled:NO];
-    [[self historyTokenListViewController] setShowsAppSectionEnabled:NO];
+    [[self historyTokenListViewController] setShowsAppSectionEnabled:YES];
     [[self favoritesTokenListViewController] setShowsCategorySectionEnabled:[self favoritesFilterShowsCategories]];
     [[self favoritesTokenListViewController] setShowsTagSectionEnabled:[self favoritesFilterShowsTags]];
     [[self favoritesTokenListViewController] setShowsAppSectionEnabled:[self favoritesFilterShowsApps]];
@@ -560,7 +569,7 @@ NS_ASSUME_NONNULL_END
         return NO;
     }
     if (![self listViewControllerIsFavorites:listViewController]) {
-        return NO;
+        return YES;
     }
     if (![self isFavoritesFilterPanelVisible]) {
         return NO;
@@ -593,13 +602,15 @@ NS_ASSUME_NONNULL_END
         [tokenListController setShowsTagSectionEnabled:[self favoritesFilterShowsTags]];
         [tokenListController setShowsAppSectionEnabled:[self favoritesFilterShowsApps]];
     } else {
-        [tokenListController setShowsCategorySectionEnabled:NO];
+        [tokenListController setShowsCategorySectionEnabled:YES];
         [tokenListController setShowsTagSectionEnabled:NO];
-        [tokenListController setShowsAppSectionEnabled:NO];
+        [tokenListController setShowsAppSectionEnabled:YES];
     }
     [tokenListController updateWithSearchCriteria:[listViewController searchCriteria]
                                         tagTokens:[self tagTokens]
-                                        appTokens:[self appTokens]];
+                                        appTokens:([self listViewControllerIsFavorites:listViewController]
+                                                       ? [self favoritesAppTokens]
+                                                       : [self historyAppTokens])];
 }
 
 - (void)updateAllTokenLists {
@@ -702,9 +713,41 @@ NS_ASSUME_NONNULL_END
         [self setNeedsAppTokenReloadAfterCurrentLoad:YES];
         return;
     }
-    if ([self isSearchActive]) {
+    if ([self isSearchActive] || [self isFavoritesFilterPanelVisible]) {
         [self loadAppTokensIfNeeded];
     }
+}
+
+- (void)finishAppTokenLoadForHistoryKey:(NSString *)historyKey
+                       bundleIdentifiers:(NSArray<NSString *> *)bundleIdentifiers
+                                   error:(NSError *_Nullable)error
+                    requestIdentifier:(NSUInteger)requestIdentifier {
+    if ([self appTokenLoadRequestIdentifier] != requestIdentifier) {
+        return;
+    }
+    if (error) {
+        [self setAppTokensDirty:YES];
+        [self setAppTokenLoadHadError:YES];
+        [self setAppTokenLoadError:error];
+    } else if ([historyKey isEqualToString:kKayokoHistoryKeyFavorites]) {
+        [self setFavoritesAppTokens:[self appTokensFromBundleIdentifiers:bundleIdentifiers]];
+    } else {
+        [self setHistoryAppTokens:[self appTokensFromBundleIdentifiers:bundleIdentifiers]];
+    }
+
+    [self setPendingAppTokenLoads:[self pendingAppTokenLoads] - 1];
+    if ([self pendingAppTokenLoads] != 0) {
+        return;
+    }
+
+    [self setLoadingAppTokens:NO];
+    if ([self appTokenLoadHadError]) {
+        [[self delegate] searchController:self didFailLoadingSearchWithError:[self appTokenLoadError]];
+    } else {
+        [self updateAllTokenLists];
+        [self syncSearchBarsAfterTokenSourceChange];
+    }
+    [self finishLoadingAppTokensAndReloadIfNeeded];
 }
 
 - (void)loadAppTokensIfNeeded {
@@ -717,32 +760,35 @@ NS_ASSUME_NONNULL_END
     }
     [self setAppTokensDirty:NO];
     [self setLoadingAppTokens:YES];
+    [self setPendingAppTokenLoads:2];
+    [self setAppTokenLoadHadError:NO];
+    [self setAppTokenLoadError:nil];
     NSUInteger requestIdentifier = [self appTokenLoadRequestIdentifier] + 1;
     [self setAppTokenLoadRequestIdentifier:requestIdentifier];
     __weak typeof(self) weakSelf = self;
     [[KayokoPasteboardManager sharedInstance]
-        availableSearchAppBundleIdentifiersWithCompletion:^(NSArray<NSString *> *bundleIdentifiers, NSError *error) {
+        availableSearchAppBundleIdentifiersForHistoryKey:kKayokoHistoryKeyHistory
+                                               completion:^(NSArray<NSString *> *bundleIdentifiers, NSError *error) {
           __strong typeof(weakSelf) strongSelf = weakSelf;
           if (!strongSelf) {
               return;
           }
-          [strongSelf setLoadingAppTokens:NO];
-          if ([strongSelf appTokenLoadRequestIdentifier] != requestIdentifier) {
+          [strongSelf finishAppTokenLoadForHistoryKey:kKayokoHistoryKeyHistory
+                                     bundleIdentifiers:bundleIdentifiers
+                                                 error:error
+                                      requestIdentifier:requestIdentifier];
+        }];
+    [[KayokoPasteboardManager sharedInstance]
+        availableSearchAppBundleIdentifiersForHistoryKey:kKayokoHistoryKeyFavorites
+                                               completion:^(NSArray<NSString *> *bundleIdentifiers, NSError *error) {
+          __strong typeof(weakSelf) strongSelf = weakSelf;
+          if (!strongSelf) {
               return;
           }
-          if (error) {
-              [strongSelf setAppTokensDirty:YES];
-              [[strongSelf delegate] searchController:strongSelf didFailLoadingSearchWithError:error];
-              return;
-          }
-
-          NSArray<KayokoSearchToken *> *appTokens = [strongSelf appTokensFromBundleIdentifiers:bundleIdentifiers];
-          if (![strongSelf tokenArray:[strongSelf appTokens] isDisplayEqualToTokenArray:appTokens]) {
-              [strongSelf setAppTokens:appTokens];
-              [strongSelf updateAllTokenLists];
-              [strongSelf syncSearchBarsAfterTokenSourceChange];
-          }
-          [strongSelf finishLoadingAppTokensAndReloadIfNeeded];
+          [strongSelf finishAppTokenLoadForHistoryKey:kKayokoHistoryKeyFavorites
+                                     bundleIdentifiers:bundleIdentifiers
+                                                 error:error
+                                      requestIdentifier:requestIdentifier];
         }];
 }
 
@@ -906,9 +952,12 @@ NS_ASSUME_NONNULL_END
     [self attachToListViewController:listViewController hidesSearchBar:![self isSearchActive]];
     if ([self isSearchActive]) {
         [self reloadTagTokens];
+        [self loadAppTokensIfNeeded];
     } else if ([self listViewControllerIsFavorites:listViewController] && [self isFavoritesFilterPanelVisible] &&
                ([self favoritesFilterShowsTags] || [self favoritesFilterShowsApps])) {
         [self bootstrapSearchTokenSourcesIfNeeded];
+    } else if (![self listViewControllerIsFavorites:listViewController]) {
+        [self loadAppTokensIfNeeded];
     }
     [self syncSearchBarForListViewController:listViewController];
     [self updateTokenListForListViewController:listViewController];

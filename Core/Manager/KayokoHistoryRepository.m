@@ -392,11 +392,16 @@ forItemDictionary:(NSDictionary<NSString *, id> *)dictionary
 #pragma mark - Search Metadata
 
 - (void)availableSearchAppBundleIdentifiersWithCompletion:(KayokoHistoryAppBundleIdentifiersCompletion)completion {
+    [self availableSearchAppBundleIdentifiersForHistoryKey:nil completion:completion];
+}
+
+- (void)availableSearchAppBundleIdentifiersForHistoryKey:(NSString *)historyKey
+                                              completion:(KayokoHistoryAppBundleIdentifiersCompletion)completion {
     [self performAsync:^{
       NSError *error = nil;
       KayokoHistoryStore *historyStore = [self preparedHistoryStoreOnQueueWithError:&error];
       NSArray<NSString *> *bundleIdentifiers =
-          historyStore ? [historyStore availableSearchAppBundleIdentifiersWithError:&error] : @[];
+          historyStore ? [historyStore availableSearchAppBundleIdentifiersForHistoryKey:historyKey error:&error] : @[];
       if (error) {
           HBLogDebug(@"Kayoko: Failed to load search app tokens: %@", error);
       }

@@ -101,6 +101,8 @@ forPasteboardItem:(KayokoPasteboardItem *)item
                         completion:(nullable KayokoPasteboardItemsCompletion)completion;
 - (void)availableSearchAppBundleIdentifiersWithCompletion:
     (nullable KayokoPasteboardAppBundleIdentifiersCompletion)completion;
+- (void)availableSearchAppBundleIdentifiersForHistoryKey:(nullable NSString *)historyKey
+                                              completion:(nullable KayokoPasteboardAppBundleIdentifiersCompletion)completion;
 - (nullable KayokoPasteboardItem *)getLatestHistoryItem;
 - (nullable UIImage *)getImageForItem:(KayokoPasteboardItem *)item;
 - (void)getThumbnailForItem:(KayokoPasteboardItem *)item

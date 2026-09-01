@@ -1282,6 +1282,11 @@ forPasteboardItem:(KayokoPasteboardItem *)item
 }
 
 - (void)availableSearchAppBundleIdentifiersWithCompletion:(KayokoPasteboardAppBundleIdentifiersCompletion)completion {
+    [self availableSearchAppBundleIdentifiersForHistoryKey:nil completion:completion];
+}
+
+- (void)availableSearchAppBundleIdentifiersForHistoryKey:(NSString *)historyKey
+                                              completion:(KayokoPasteboardAppBundleIdentifiersCompletion)completion {
     if (_maintenanceMode) {
         if (completion) {
             completion(@[], [self maintenanceModeError]);
@@ -1289,7 +1294,11 @@ forPasteboardItem:(KayokoPasteboardItem *)item
         return;
     }
 
-    [_historyRepository availableSearchAppBundleIdentifiersWithCompletion:completion];
+    if ([historyKey length] == 0) {
+        [_historyRepository availableSearchAppBundleIdentifiersWithCompletion:completion];
+    } else {
+        [_historyRepository availableSearchAppBundleIdentifiersForHistoryKey:historyKey completion:completion];
+    }
 }
 
 - (KayokoPasteboardItem *)getLatestHistoryItem {
