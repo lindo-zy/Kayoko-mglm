@@ -85,6 +85,7 @@ NS_ASSUME_NONNULL_END
         _favoritesTokenListViewController = [[KayokoSearchTokenListViewController alloc] init];
         [_historyTokenListViewController setDelegate:self];
         [_favoritesTokenListViewController setDelegate:self];
+        [_historyTokenListViewController setKeepsSelectedSectionsVisible:YES];
         [_favoritesTokenListViewController setKeepsSelectedSectionsVisible:YES];
         __weak typeof(self) weakSelf = self;
         [_historyTokenListViewController setContentHeightDidChange:^{
@@ -154,11 +155,16 @@ NS_ASSUME_NONNULL_END
 
 - (void)handleHistoryDidChangeNotification:(NSNotification *)notification {
     (void)notification;
-    [self invalidateAppTokensAndReloadIfActive];
+    [self handleHistoryContentChanged];
 }
 
 - (void)handleApplicationMetadataChanged {
     [self invalidateAppTokensAndReloadIfActive];
+}
+
+- (void)handleHistoryContentChanged {
+    [self setAppTokensDirty:YES];
+    [self loadAppTokensIfNeeded];
 }
 
 #pragma mark - View Lookup
@@ -366,26 +372,18 @@ NS_ASSUME_NONNULL_END
 }
 
 - (BOOL)syncSearchTokensForSearchBar:(UISearchBar *)searchBar criteria:(KayokoSearchCriteria *)criteria {
+    (void)criteria;
     UITextField *textField = [searchBar searchTextField];
     if (![textField respondsToSelector:@selector(setTokens:)]) {
         return NO;
     }
     UISearchTextField *searchTextField = (UISearchTextField *)textField;
-    if (searchBar == [self favoritesSearchBar]) {
-        if ([[searchTextField tokens] count] == 0) {
-            return NO;
-        }
-        [searchTextField setTokens:@[]];
-        return YES;
-    }
-    KayokoSearchTokenListViewController *tokenListController = [self tokenListViewControllerForSearchBar:searchBar];
-    NSArray<KayokoSearchToken *> *tokens = [self searchTokensForCriteria:criteria
-                                                     tokenListController:tokenListController];
-    if ([self searchTextField:searchTextField hasSearchTokens:tokens]) {
+    if ([[searchTextField tokens] count] == 0) {
         return NO;
     }
-
-    [searchTextField setTokens:[self searchFieldTokensForSearchTokens:tokens]];
+    // Category and application filters are represented by the token sections below
+    // the search bar, so the search field remains text-only for both lists.
+    [searchTextField setTokens:@[]];
     return YES;
 }
 
@@ -393,36 +391,7 @@ NS_ASSUME_NONNULL_END
                              listViewController:(KayokoHistoryListViewController *)listViewController {
     KayokoSearchCriteria *criteria =
         [[listViewController searchCriteria] criteriaByReplacingSearchText:[searchBar text]];
-    if ([self listViewControllerIsFavorites:listViewController]) {
-        return criteria;
-    }
-    NSArray<UISearchToken *> *tokens = [(UISearchTextField *)[searchBar searchTextField] tokens];
-    BOOL hasCategoryToken = NO;
-    BOOL hasTagToken = NO;
-    BOOL hasAppToken = NO;
-    NSString *categoryValue = nil;
-    NSString *tagUUID = nil;
-    NSString *appBundleIdentifier = nil;
-    for (UISearchToken *searchToken in tokens) {
-        KayokoSearchToken *token = [searchToken representedObject];
-        if (![token isKindOfClass:[KayokoSearchToken class]]) {
-            continue;
-        }
-        if ([[token type] isEqualToString:kKayokoSearchTokenTypeCategory] && !hasCategoryToken) {
-            categoryValue = [token value];
-            hasCategoryToken = YES;
-        } else if ([[token type] isEqualToString:kKayokoSearchTokenTypeTag] && !hasTagToken) {
-            tagUUID = [token value];
-            hasTagToken = YES;
-        } else if ([[token type] isEqualToString:kKayokoSearchTokenTypeApp] && !hasAppToken) {
-            appBundleIdentifier = [token value];
-            hasAppToken = YES;
-        }
-    }
-    return [KayokoSearchCriteria criteriaWithSearchText:[criteria searchText]
-                                          categoryValue:categoryValue
-                                    appBundleIdentifier:appBundleIdentifier
-                                                tagUUID:tagUUID];
+    return criteria;
 }
 
 #pragma mark - Favorites Filter Panel
@@ -676,16 +645,9 @@ NS_ASSUME_NONNULL_END
         }
     }
 
-    NSArray<NSString *> *sortedBundleIdentifiers =
-        [installedBundleIdentifiers sortedArrayUsingComparator:^NSComparisonResult(NSString *left, NSString *right) {
-          NSString *leftName = [[self metadataProvider] displayNameForBundleIdentifier:left];
-          NSString *rightName = [[self metadataProvider] displayNameForBundleIdentifier:right];
-          NSComparisonResult result = [leftName localizedStandardCompare:rightName];
-          return result == NSOrderedSame ? [left localizedStandardCompare:right] : result;
-        }];
     NSMutableArray<KayokoSearchToken *> *appTokens =
-        [[NSMutableArray alloc] initWithCapacity:[sortedBundleIdentifiers count]];
-    for (NSString *bundleIdentifier in sortedBundleIdentifiers) {
+        [[NSMutableArray alloc] initWithCapacity:[installedBundleIdentifiers count]];
+    for (NSString *bundleIdentifier in installedBundleIdentifiers) {
         NSString *title = [[self metadataProvider] displayNameForBundleIdentifier:bundleIdentifier];
         [appTokens
             addObject:[KayokoSearchToken tokenWithType:kKayokoSearchTokenTypeApp

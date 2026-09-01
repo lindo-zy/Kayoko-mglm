@@ -96,7 +96,11 @@
             [tokens addObjectsFromArray:[self wordTokensForText:text inRange:gapRange]];
         }
 
-        [self addTokenFromText:text inRange:range toTokens:tokens];
+        if ([result resultType] == NSTextCheckingTypeLink) {
+            [tokens addObjectsFromArray:[self urlTokensForText:text inRange:range]];
+        } else {
+            [self addTokenFromText:text inRange:range toTokens:tokens];
+        }
         cursor = NSMaxRange(range);
     }
 
@@ -120,6 +124,58 @@
 }
 
 #pragma mark - Word Tokenization
+
++ (NSArray<NSDictionary<NSString *, id> *> *)characterTokensForText:(NSString *)text {
+    if (![text length]) {
+        return @[];
+    }
+
+    NSMutableArray<NSDictionary<NSString *, id> *> *tokens = [[NSMutableArray alloc] init];
+    [self addCharacterTokensFromText:text
+                             inRange:NSMakeRange(0, [text length])
+                            toTokens:tokens];
+    return tokens;
+}
+
++ (NSArray<NSDictionary<NSString *, id> *> *)urlTokensForText:(NSString *)text inRange:(NSRange)range {
+    NSMutableArray<NSDictionary<NSString *, id> *> *tokens = [[NSMutableArray alloc] init];
+    NSCharacterSet *separatorCharacters = [self urlSeparatorCharacterSet];
+    __block NSUInteger cursor = range.location;
+
+    [text enumerateSubstringsInRange:range
+                             options:NSStringEnumerationByComposedCharacterSequences
+                          usingBlock:^(NSString *_Nullable substring, NSRange substringRange, NSRange enclosingRange,
+                                       BOOL *_Nonnull stop) {
+                            if ([substring length] != 1 ||
+                                [substring rangeOfCharacterFromSet:separatorCharacters].location == NSNotFound) {
+                                return;
+                            }
+
+                            if (substringRange.location > cursor) {
+                                [self addTokenFromText:text
+                                               inRange:NSMakeRange(cursor, substringRange.location - cursor)
+                                              toTokens:tokens];
+                            }
+                            [self addTokenFromText:text inRange:substringRange toTokens:tokens];
+                            cursor = NSMaxRange(substringRange);
+                          }];
+
+    if (cursor < NSMaxRange(range)) {
+        [self addTokenFromText:text
+                       inRange:NSMakeRange(cursor, NSMaxRange(range) - cursor)
+                      toTokens:tokens];
+    }
+    return tokens;
+}
+
++ (NSCharacterSet *)urlSeparatorCharacterSet {
+    static NSCharacterSet *characterSet = nil;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+      characterSet = [NSCharacterSet characterSetWithCharactersInString:@":/?#[]@!$&'()*+,;=%"];
+    });
+    return characterSet;
+}
 
 + (NSArray<NSDictionary<NSString *, id> *> *)wordTokensForText:(NSString *)text inRange:(NSRange)range {
     NSMutableArray<NSDictionary<NSString *, id> *> *tokens = [[NSMutableArray alloc] init];

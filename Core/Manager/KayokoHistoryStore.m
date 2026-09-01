@@ -802,11 +802,16 @@ forItemDictionary:(NSDictionary<NSString *, id> *)dictionary
                                                                       error:(NSError **)error {
     sqlite3_stmt *statement = NULL;
     const char *sql = historyKey.length > 0
-                          ? "SELECT DISTINCT bundle_identifier FROM history_items "
+                          ? "SELECT bundle_identifier FROM history_items "
                             "WHERE history_key = ? AND bundle_identifier <> '' "
-                            "ORDER BY bundle_identifier COLLATE NOCASE"
-                          : "SELECT DISTINCT bundle_identifier FROM history_items "
-                            "WHERE bundle_identifier <> '' ORDER BY bundle_identifier COLLATE NOCASE";
+                            "GROUP BY bundle_identifier "
+                            "ORDER BY COUNT(*) DESC, MAX(sequence) DESC, bundle_identifier COLLATE NOCASE "
+                            "LIMIT 3"
+                          : "SELECT bundle_identifier FROM history_items "
+                            "WHERE bundle_identifier <> '' "
+                            "GROUP BY bundle_identifier "
+                            "ORDER BY COUNT(*) DESC, MAX(sequence) DESC, bundle_identifier COLLATE NOCASE "
+                            "LIMIT 3";
     if (![self prepareStatement:sql statement:&statement error:error]) {
         return @[];
     }

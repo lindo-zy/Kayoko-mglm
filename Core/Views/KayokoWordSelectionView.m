@@ -151,6 +151,14 @@ NS_ASSUME_NONNULL_END
         [self setSelectionGestureRecognizer:selectionGesture];
         [[self contentView] addGestureRecognizer:selectionGesture];
 
+        UILongPressGestureRecognizer *tokenizationGesture =
+            [[UILongPressGestureRecognizer alloc] initWithTarget:self action:@selector(handleTokenizationGesture:)];
+        [tokenizationGesture setDelegate:self];
+        [tokenizationGesture setMinimumPressDuration:0.5];
+        [tokenizationGesture setAllowableMovement:12.0];
+        [[self contentView] addGestureRecognizer:tokenizationGesture];
+        [selectionGesture requireGestureRecognizerToFail:tokenizationGesture];
+
         [self updateSelectionPreviewStyle];
         [self updateSelectionPreview];
     }
@@ -167,6 +175,18 @@ NS_ASSUME_NONNULL_END
     NSArray<NSDictionary<NSString *, id> *> *tokens = [KayokoWordSelectionTokenizer tokensForText:text];
     [[self tokens] addObjectsFromArray:tokens];
 
+    [self rebuildTokenButtons];
+    [self updateButtonStyles];
+    [self notifySelectionChanged];
+    [self setNeedsLayout];
+}
+
+- (void)rebuildTokenButtons {
+    for (KayokoWordTokenView *button in [self tokenButtons]) {
+        [button removeFromSuperview];
+    }
+    [[self tokenButtons] removeAllObjects];
+
     for (NSUInteger index = 0; index < [[self tokens] count]; index++) {
         KayokoWordTokenView *button = [[KayokoWordTokenView alloc] initWithFrame:CGRectZero];
         NSDictionary<NSString *, id> *token = [self tokens][index];
@@ -182,10 +202,6 @@ NS_ASSUME_NONNULL_END
         [[self contentView] addSubview:button];
         [[self tokenButtons] addObject:button];
     }
-
-    [self updateButtonStyles];
-    [self notifySelectionChanged];
-    [self setNeedsLayout];
 }
 
 - (void)reset {
@@ -366,10 +382,76 @@ NS_ASSUME_NONNULL_END
     }
 }
 
+- (void)handleTokenizationGesture:(UILongPressGestureRecognizer *)gesture {
+    if ([gesture state] != UIGestureRecognizerStateBegan) {
+        return;
+    }
+
+    NSUInteger tokenIndex = [self tokenIndexAtPoint:[gesture locationInView:[self contentView]]];
+    if (tokenIndex == NSNotFound || tokenIndex >= [[self tokens] count]) {
+        return;
+    }
+
+    NSDictionary<NSString *, id> *token = [self tokens][tokenIndex];
+    NSString *tokenText = token[@"text"];
+    NSArray<NSDictionary<NSString *, id> *> *characterTokens =
+        [KayokoWordSelectionTokenizer characterTokensForText:tokenText];
+    if ([characterTokens count] <= 1) {
+        return;
+    }
+
+    NSRange originalRange = [token[@"range"] rangeValue];
+    NSMutableArray<NSDictionary<NSString *, id> *> *replacementTokens =
+        [[NSMutableArray alloc] initWithCapacity:[characterTokens count]];
+    for (NSUInteger index = 0; index < [characterTokens count]; index++) {
+        NSDictionary<NSString *, id> *characterToken = characterTokens[index];
+        NSMutableDictionary<NSString *, id> *replacementToken = [characterToken mutableCopy];
+        NSRange characterRange = [characterToken[@"range"] rangeValue];
+        replacementToken[@"range"] = [NSValue valueWithRange:NSMakeRange(originalRange.location + characterRange.location,
+                                                                          characterRange.length)];
+        if (index + 1 == [characterTokens count] && token[@"lineBreakAfter"]) {
+            replacementToken[@"lineBreakAfter"] = @YES;
+        }
+        [replacementTokens addObject:replacementToken];
+    }
+
+    NSIndexSet *selectedIndexes = [[self selectedTokenIndexes] copy];
+    NSMutableArray<NSDictionary<NSString *, id> *> *updatedTokens = [[NSMutableArray alloc] init];
+    NSMutableIndexSet *updatedSelectedIndexes = [[NSMutableIndexSet alloc] init];
+    NSUInteger updatedIndex = 0;
+    for (NSUInteger index = 0; index < [[self tokens] count]; index++) {
+        NSArray<NSDictionary<NSString *, id> *> *tokensToAdd = index == tokenIndex ? replacementTokens : @[ [self tokens][index] ];
+        [updatedTokens addObjectsFromArray:tokensToAdd];
+        if ([selectedIndexes containsIndex:index]) {
+            [updatedSelectedIndexes addIndexesInRange:NSMakeRange(updatedIndex, [tokensToAdd count])];
+        }
+        updatedIndex += [tokensToAdd count];
+    }
+
+    [[self tokens] removeAllObjects];
+    [[self tokens] addObjectsFromArray:updatedTokens];
+    [[self selectedTokenIndexes] removeAllIndexes];
+    [[self selectedTokenIndexes] addIndexes:updatedSelectedIndexes];
+    [[self selectedTokenOrderValues] removeAllObjects];
+    __block NSUInteger orderValue = 0;
+    [[self selectedTokenIndexes] enumerateIndexesUsingBlock:^(NSUInteger index, BOOL *stop) {
+      [self selectedTokenOrderValues][@(index)] = @(orderValue++);
+    }];
+    [self setHasCustomSelection:YES];
+    [self rebuildTokenButtons];
+    [self updateButtonStyles];
+    [self notifySelectionChanged];
+    [self setNeedsLayout];
+}
+
 - (BOOL)gestureRecognizerShouldBegin:(UIGestureRecognizer *)gestureRecognizer {
     CGPoint location = [gestureRecognizer locationInView:[self contentView]];
 
     if ([gestureRecognizer isKindOfClass:[UITapGestureRecognizer class]]) {
+        return [self tokenIndexAtPoint:location] != NSNotFound;
+    }
+
+    if ([gestureRecognizer isKindOfClass:[UILongPressGestureRecognizer class]]) {
         return [self tokenIndexAtPoint:location] != NSNotFound;
     }
 
@@ -672,24 +754,12 @@ NS_ASSUME_NONNULL_END
       return leftIndex < rightIndex ? NSOrderedAscending : NSOrderedDescending;
     }];
 
-    NSUInteger previousTokenIndex = NSNotFound;
-    NSRange previousRange = NSMakeRange(NSNotFound, 0);
     for (NSNumber *indexValue in orderedIndexes) {
         NSUInteger index = [indexValue unsignedIntegerValue];
         NSDictionary<NSString *, id> *token = [self tokens][index];
-        NSRange range = [token[@"range"] rangeValue];
-        if ([selectedText length] > 0) {
-            if (previousTokenIndex != NSNotFound && index == previousTokenIndex + 1 &&
-                NSMaxRange(previousRange) <= range.location) {
-                NSRange separatorRange =
-                    NSMakeRange(NSMaxRange(previousRange), range.location - NSMaxRange(previousRange));
-                [selectedText appendString:[[self originalText] substringWithRange:separatorRange]];
-            }
-        }
-
+        // Selection-order mode returns exactly the selected token text in tap order.
+        // Do not reinsert separators from the original text, including spaces.
         [selectedText appendString:token[@"text"]];
-        previousTokenIndex = index;
-        previousRange = range;
     }
 
     return [selectedText copy];

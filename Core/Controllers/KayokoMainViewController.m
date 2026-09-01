@@ -804,6 +804,7 @@ NS_ASSUME_NONNULL_END
     [self handlePasteboardItemDictionary:dictionary
                      movedFromHistoryKey:sourceHistoryKey
                             toHistoryKey:destinationHistoryKey];
+    [[self searchController] handleHistoryContentChanged];
 }
 
 #pragma mark - Content Lookup

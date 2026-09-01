@@ -10,6 +10,7 @@ NS_ASSUME_NONNULL_BEGIN
 @interface KayokoWordSelectionTokenizer : NSObject
 
 + (NSArray<NSDictionary<NSString *, id> *> *)tokensForText:(NSString *)text;
++ (NSArray<NSDictionary<NSString *, id> *> *)characterTokensForText:(NSString *)text;
 
 @end
 
