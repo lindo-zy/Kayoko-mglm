@@ -9,7 +9,7 @@
             "views": [
                 {
                     "class": "DepictionMarkdownView",
-                    "markdown": "功能丰富的剪切板管理器，基于 Kayoko (乌龙版本)和mglm版本进行修改",
+                    "markdown": "功能丰富的剪切板管理器，基于 Kayoko (乌龙版本)和mglm版本进行修改,参考致敬了Copy-Vault",
                     "useRawFormat": true
                 },
                 {
@@ -47,7 +47,7 @@
             "views": [
                 {
                     "class": "DepictionSubheaderView",
-                    "title": "4.8.1",
+                    "title": "4.8.11",
                     "useBoldText": true,
                     "useBottomMargin": false
                 },

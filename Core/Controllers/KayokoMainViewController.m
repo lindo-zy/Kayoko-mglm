@@ -795,6 +795,9 @@ NS_ASSUME_NONNULL_END
 
 - (void)historyListViewControllerDidChangeContentState:(KayokoHistoryListViewController *)controller {
     [self updateContentState];
+    // Content mutations can change the app token sources even when no history
+    // change notification is emitted (for example, removing a favorite).
+    [[self searchController] handleHistoryContentChanged];
 }
 
 - (void)historyListViewController:(KayokoHistoryListViewController *)controller
@@ -804,6 +807,8 @@ NS_ASSUME_NONNULL_END
     [self handlePasteboardItemDictionary:dictionary
                      movedFromHistoryKey:sourceHistoryKey
                             toHistoryKey:destinationHistoryKey];
+    // Refresh again after the source list finishes removing the moved item so
+    // both token lists reflect the completed favorite toggle.
     [[self searchController] handleHistoryContentChanged];
 }
 

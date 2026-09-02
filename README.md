@@ -1,13 +1,12 @@
 # Kayoko
 
-Feature-rich clipboard manager for iOS.
-
-A Kayoko fork maintained by **mlgm**, based on the [OwnGoal Studio edition](https://github.com/OwnGoalStudio/Kayoko).
-
+多功能剪切板，参考致敬了Copy-Vault
+支持ios16~ios17，roothide
 ## Credits
 
 - Original project: [AlexandraAurora/Kayoko](https://github.com/AlexandraAurora/Kayoko)
 - Based on: [OwnGoalStudio/Kayoko](https://github.com/OwnGoalStudio/Kayoko)
+- Based on: [mlgm66/Kayoko](https://github.com/mlgm66/Kayoko)
 
 ## License
 

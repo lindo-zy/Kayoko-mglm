@@ -30,6 +30,8 @@ NS_ASSUME_NONNULL_BEGIN
 @property(nonatomic, strong, nullable, readwrite) KayokoPasteboardItem *previewItem;
 @property(nonatomic, strong) KayokoHistoryItemActionHandler *actionHandler;
 @property(nonatomic, strong) KayokoActivitySharePresenter *activitySharePresenter;
+@property(nonatomic, strong, nullable) UILabel *piiicoToastLabel;
+@property(nonatomic, assign) NSUInteger piiicoToastRequestIdentifier;
 
 - (NSString *)actionImageNameForItem:(KayokoPasteboardItem *)item;
 - (NSString *)actionAccessibilityLabelKeyForItem:(KayokoPasteboardItem *)item;
@@ -38,6 +40,8 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)configureEditButton;
 - (void)setEditButtonHidden:(BOOL)hidden;
 - (void)handleEditButtonPressed;
+- (void)handlePencilTipButtonPressed;
+- (void)showPiiicoUnavailableToast;
 @end
 
 NS_ASSUME_NONNULL_END
@@ -62,6 +66,10 @@ NS_ASSUME_NONNULL_END
         [[[_previewView headerView] editButton]
                    addTarget:self
                       action:@selector(handleEditButtonPressed)
+            forControlEvents:UIControlEventTouchUpInside];
+        [[[_previewView headerView] alternateTrailingButton]
+                   addTarget:self
+                      action:@selector(handlePencilTipButtonPressed)
             forControlEvents:UIControlEventTouchUpInside];
         [self setView:_previewView];
     }
@@ -101,6 +109,14 @@ NS_ASSUME_NONNULL_END
                        withImageName:@"square.and.arrow.up"
                            imageSize:kKayokoBackButtonImageSize
                            tintColor:[UIColor labelColor]];
+    [headerView updateStyleForButton:[headerView alternateTrailingButton]
+                       withImageName:@"pencil.tip"
+                           imageSize:kKayokoBackButtonImageSize
+                           tintColor:[UIColor labelColor]];
+    BOOL isImageItem = [[item imageName] length] > 0;
+    [[headerView alternateTrailingButton] setHidden:!isImageItem];
+    [[headerView alternateTrailingButton] setEnabled:isImageItem];
+    [[headerView alternateTrailingButton] setAlpha:isImageItem ? 1.0 : 0.0];
     [[headerView shareButton] setHidden:NO];
     [[headerView leadingButton]
         setAccessibilityLabel:[[KayokoPasteboardManager localizationBundle] localizedStringForKey:@"Back"
@@ -116,6 +132,10 @@ NS_ASSUME_NONNULL_END
     [[headerView shareButton]
         setAccessibilityLabel:[[KayokoPasteboardManager localizationBundle] localizedStringForKey:@"Share"
                                                                                             value:nil
+                                                                                            table:@"Tweak"]];
+    [[headerView alternateTrailingButton]
+        setAccessibilityLabel:[[KayokoPasteboardManager localizationBundle] localizedStringForKey:@"Open in piiico"
+                                                                                            value:@"打开piiico"
                                                                                             table:@"Tweak"]];
     [self configureEditButton];
     [self updateShareButtonState];
@@ -219,6 +239,88 @@ NS_ASSUME_NONNULL_END
     [[self delegate] previewViewControllerDidRequestEdit:self];
 }
 
+- (void)handlePencilTipButtonPressed {
+    KayokoPasteboardItem *item = [self previewItem];
+    if (!item || [[self previewView] isHidden] || [[item imageName] length] == 0) {
+        return;
+    }
+
+    if (![[KayokoPasteboardManager sharedInstance] copyPasteboardItemToPasteboard:item]) {
+        return;
+    }
+
+    NSURL *URL = [NSURL URLWithString:@"piiico://pasteboard"];
+    if (!URL) {
+        [self showPiiicoUnavailableToast];
+        return;
+    }
+
+    __weak typeof(self) weakSelf = self;
+    [[UIApplication sharedApplication] openURL:URL
+                                       options:@{}
+                             completionHandler:^(BOOL success) {
+                               if (success) {
+                                   return;
+                               }
+                               dispatch_async(dispatch_get_main_queue(), ^{
+                                 [weakSelf showPiiicoUnavailableToast];
+                               });
+                             }];
+}
+
+- (void)showPiiicoUnavailableToast {
+    NSUInteger requestIdentifier = [self piiicoToastRequestIdentifier] + 1;
+    [self setPiiicoToastRequestIdentifier:requestIdentifier];
+
+    UILabel *toastLabel = [self piiicoToastLabel];
+    if (!toastLabel) {
+        toastLabel = [[UILabel alloc] init];
+        [toastLabel setTranslatesAutoresizingMaskIntoConstraints:NO];
+        [toastLabel setTextAlignment:NSTextAlignmentCenter];
+        [toastLabel setTextColor:[UIColor whiteColor]];
+        [toastLabel setFont:[UIFont systemFontOfSize:14 weight:UIFontWeightMedium]];
+        [toastLabel setBackgroundColor:[UIColor colorWithWhite:0 alpha:0.78]];
+        [toastLabel.layer setCornerRadius:10];
+        [toastLabel setClipsToBounds:YES];
+        [toastLabel setUserInteractionEnabled:NO];
+        [[self view] addSubview:toastLabel];
+        [NSLayoutConstraint activateConstraints:@[
+            [[toastLabel centerXAnchor] constraintEqualToAnchor:[[self view] centerXAnchor]],
+            [[toastLabel bottomAnchor] constraintEqualToAnchor:[[self view] safeAreaLayoutGuide].bottomAnchor constant:-24],
+            [[toastLabel leadingAnchor] constraintGreaterThanOrEqualToAnchor:[[self view] leadingAnchor] constant:24],
+            [[toastLabel trailingAnchor] constraintLessThanOrEqualToAnchor:[[self view] trailingAnchor] constant:-24],
+            [[toastLabel heightAnchor] constraintGreaterThanOrEqualToConstant:36]
+        ]];
+        [self setPiiicoToastLabel:toastLabel];
+    }
+
+    [toastLabel setText:@"需要安装piiico"];
+    [toastLabel setAlpha:0.0];
+    [toastLabel setHidden:NO];
+    [[self view] bringSubviewToFront:toastLabel];
+    [UIView animateWithDuration:0.12 animations:^{
+      [toastLabel setAlpha:1.0];
+    }];
+
+    __weak typeof(self) weakSelf = self;
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)),
+                   dispatch_get_main_queue(), ^{
+                     __strong typeof(weakSelf) strongSelf = weakSelf;
+                     if (!strongSelf || [strongSelf piiicoToastRequestIdentifier] != requestIdentifier) {
+                         return;
+                     }
+                     [UIView animateWithDuration:0.12
+                         animations:^{
+                           [toastLabel setAlpha:0.0];
+                         }
+                         completion:^(__unused BOOL finished) {
+                           if ([strongSelf piiicoToastRequestIdentifier] == requestIdentifier) {
+                               [toastLabel setHidden:YES];
+                           }
+                         }];
+                   });
+}
+
 - (void)handleShareButtonPressed {
     id activityItem = [self activityItemForPreviewItem:[self previewItem]];
     if (!activityItem || [[self previewView] isHidden]) {
@@ -261,8 +363,10 @@ NS_ASSUME_NONNULL_END
 - (void)hidePreview {
     [[self activitySharePresenter] dismissActivityAnimated:NO];
     [[[[self previewView] headerView] shareButton] setHidden:YES];
+    [[[[self previewView] headerView] alternateTrailingButton] setHidden:YES];
     [self setEditButtonHidden:YES];
     [[self previewView] setUserInteractionEnabled:YES];
+    [[self piiicoToastLabel] setHidden:YES];
     [self setPreviewItem:nil];
 
     [[self previewView] reset];
@@ -275,7 +379,9 @@ NS_ASSUME_NONNULL_END
     [[self previewView] setHidden:YES];
     [[self previewView] setUserInteractionEnabled:YES];
     [[[[self previewView] headerView] shareButton] setHidden:YES];
+    [[[[self previewView] headerView] alternateTrailingButton] setHidden:YES];
     [self setEditButtonHidden:YES];
+    [[self piiicoToastLabel] setHidden:YES];
     [self setPreviewItem:nil];
     [self setSourceHistoryKey:nil];
 }
