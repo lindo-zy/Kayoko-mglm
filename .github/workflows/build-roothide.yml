@@ -130,10 +130,6 @@ jobs:
         run: |
           set -euo pipefail
           tag="${GITHUB_REF_NAME}"
-          # A retry tag can republish the immutable release without replacing it.
-          if [[ "${tag}" == "v4.8.33-rebuild" ]]; then
-            tag="v4.8.33"
-          fi
           repo="${GITHUB_REPOSITORY}"
           assets=(release-assets/*.deb)
 
