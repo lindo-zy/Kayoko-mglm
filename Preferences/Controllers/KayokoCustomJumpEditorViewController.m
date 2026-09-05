@@ -10,6 +10,7 @@
 @interface KayokoCustomJumpEditorViewController () <UITableViewDataSource, UITableViewDelegate, UITextFieldDelegate>
 @property(nonatomic, strong) KayokoCustomJump *jump;
 @property(nonatomic, strong) NSBundle *localizationBundle;
+@property(nonatomic, assign, getter=isImageAction) BOOL imageAction;
 @property(nonatomic, strong) UITableView *tableView;
 @property(nonatomic, strong) UITextField *titleTextField;
 @property(nonatomic, strong) UITextField *linkTextField;
@@ -20,10 +21,17 @@
 @implementation KayokoCustomJumpEditorViewController
 
 - (instancetype)initWithJump:(KayokoCustomJump *)jump localizationBundle:(NSBundle *)localizationBundle {
+    return [self initWithJump:jump localizationBundle:localizationBundle isImageAction:NO];
+}
+
+- (instancetype)initWithJump:(KayokoCustomJump *)jump
+            localizationBundle:(NSBundle *)localizationBundle
+                isImageAction:(BOOL)isImageAction {
     self = [super initWithNibName:nil bundle:nil];
     if (self) {
         _jump = [jump copy];
         _localizationBundle = localizationBundle ?: [NSBundle mainBundle];
+        _imageAction = isImageAction;
         [self setModalPresentationStyle:UIModalPresentationPageSheet];
     }
     return self;
@@ -32,7 +40,8 @@
 - (void)viewDidLoad {
     [super viewDidLoad];
     [[self view] setBackgroundColor:[UIColor systemGroupedBackgroundColor]];
-    [self setTitle:[self localizedStringForKey:@"Edit Custom Jump"]];
+    NSString *titleKey = [self isImageAction] ? @"Edit Image Action" : @"Edit Custom Jump";
+    [self setTitle:[self localizedStringForKey:titleKey]];
 
     [[self navigationItem] setLeftBarButtonItem:[[UIBarButtonItem alloc] initWithTitle:[self localizedStringForKey:@"Cancel"]
                                                                                    style:UIBarButtonItemStylePlain

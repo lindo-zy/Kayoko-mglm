@@ -99,10 +99,40 @@ NS_ASSUME_NONNULL_END
         [self configureConditionalFootersInSpecifiers:_specifiers];
         [self configureTagManagementSpecifierInSpecifiers:_specifiers];
         [self configureCustomJumpManagementSpecifierInSpecifiers:_specifiers];
+        [self configureImageActionManagementSpecifierInSpecifiers:_specifiers];
+        [self configureImageDoubleTapActionSpecifierInSpecifiers:_specifiers];
         [self updateOverlayWindowLevelSpecifierAvailability];
     }
 
     return _specifiers;
+}
+
+- (void)configureImageActionManagementSpecifierInSpecifiers:(NSArray<PSSpecifier *> *)specifiers {
+    NSBundle *bundle = [NSBundle bundleForClass:[self class]];
+    NSString *localizedTitle = [bundle localizedStringForKey:@"IMAGE_ACTIONS" value:nil table:@"Root"];
+    for (PSSpecifier *specifier in specifiers) {
+        NSString *detail = [specifier propertyForKey:@"detail"];
+        if (![detail isEqualToString:@"KayokoImageActionManagementViewController"]) {
+            continue;
+        }
+
+        [specifier setProperty:localizedTitle forKey:@"label"];
+        break;
+    }
+}
+
+- (void)configureImageDoubleTapActionSpecifierInSpecifiers:(NSArray<PSSpecifier *> *)specifiers {
+    NSBundle *bundle = [NSBundle bundleForClass:[self class]];
+    NSString *localizedTitle = [bundle localizedStringForKey:@"IMAGE_DOUBLE_TAP_ACTION" value:nil table:@"Root"];
+    for (PSSpecifier *specifier in specifiers) {
+        NSString *detail = [specifier propertyForKey:@"detail"];
+        if (![detail isEqualToString:@"KayokoImageDoubleTapActionViewController"]) {
+            continue;
+        }
+
+        [specifier setProperty:localizedTitle forKey:@"label"];
+        break;
+    }
 }
 
 - (void)configureCustomJumpManagementSpecifierInSpecifiers:(NSArray<PSSpecifier *> *)specifiers {
@@ -412,6 +442,18 @@ NS_ASSUME_NONNULL_END
             UITableViewCell *cell = [super tableView:tableView cellForRowAtIndexPath:indexPath];
             NSBundle *bundle = [NSBundle bundleForClass:[self class]];
             cell.textLabel.text = [bundle localizedStringForKey:@"CUSTOM_JUMPS" value:nil table:@"Root"];
+            return cell;
+        }
+        if ([detail isEqualToString:@"KayokoImageActionManagementViewController"]) {
+            UITableViewCell *cell = [super tableView:tableView cellForRowAtIndexPath:indexPath];
+            NSBundle *bundle = [NSBundle bundleForClass:[self class]];
+            cell.textLabel.text = [bundle localizedStringForKey:@"IMAGE_ACTIONS" value:nil table:@"Root"];
+            return cell;
+        }
+        if ([detail isEqualToString:@"KayokoImageDoubleTapActionViewController"]) {
+            UITableViewCell *cell = [super tableView:tableView cellForRowAtIndexPath:indexPath];
+            NSBundle *bundle = [NSBundle bundleForClass:[self class]];
+            cell.textLabel.text = [bundle localizedStringForKey:@"IMAGE_DOUBLE_TAP_ACTION" value:nil table:@"Root"];
             return cell;
         }
     }

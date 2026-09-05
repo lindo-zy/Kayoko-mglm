@@ -25,6 +25,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 - (void)showPreviewWithItem:(KayokoPasteboardItem *)item sourceHistoryKey:(NSString *)sourceHistoryKey;
 - (void)handleActionButtonWithCompletion:(nullable void (^)(BOOL success))completion;
+- (void)handleImageActionButtonPressed;
 - (void)setEditButtonEnabled:(BOOL)enabled;
 - (void)hidePreview;
 - (void)resetPreviewState;

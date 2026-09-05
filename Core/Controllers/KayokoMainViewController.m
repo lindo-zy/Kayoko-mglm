@@ -121,6 +121,17 @@ NS_ASSUME_NONNULL_BEGIN
 @property(nonatomic, assign) CGRect previewTextEditingOriginalPanelFrame;
 @property(nonatomic, assign, getter=isPreviewTextEditingFinishing) BOOL previewTextEditingFinishing;
 @property(nonatomic, assign) NSUInteger previewTextEditingRequestIdentifier;
+
+- (void)showContentForItem:(KayokoPasteboardItem *)item completion:(nullable void (^)(void))completion;
+- (void)showContentForItem:(KayokoPasteboardItem *)item
+    forceWordSelection:(BOOL)forceWordSelection
+            completion:(nullable void (^)(void))completion;
+- (void)showContentForItem:(KayokoPasteboardItem *)item
+    forceWordSelection:(BOOL)forceWordSelection
+               animated:(BOOL)animated
+            completion:(nullable void (^)(void))completion;
+- (void)showWithInitialContentItem:(nullable KayokoPasteboardItem *)contentItem
+                        completion:(nullable void (^)(void))completion;
 @end
 
 NS_ASSUME_NONNULL_END
@@ -1740,7 +1751,7 @@ NS_ASSUME_NONNULL_END
     }
 
     if (![[[self wordSelectionViewController] view] isHidden]) {
-        [[self wordSelectionViewController] scrollToTopAnimated:YES];
+        [[self wordSelectionViewController] handleTextActionButtonPressed];
         return;
     }
 
@@ -2571,6 +2582,23 @@ NS_ASSUME_NONNULL_END
 #pragma mark - Transient Presentation
 
 - (void)showContentForItem:(KayokoPasteboardItem *)item {
+    [self showContentForItem:item forceWordSelection:NO animated:YES completion:nil];
+}
+
+- (void)showContentForItem:(KayokoPasteboardItem *)item completion:(nullable void (^)(void))completion {
+    [self showContentForItem:item forceWordSelection:NO animated:YES completion:completion];
+}
+
+- (void)showContentForItem:(KayokoPasteboardItem *)item
+    forceWordSelection:(BOOL)forceWordSelection
+            completion:(nullable void (^)(void))completion {
+    [self showContentForItem:item forceWordSelection:forceWordSelection animated:YES completion:completion];
+}
+
+- (void)showContentForItem:(KayokoPasteboardItem *)item
+    forceWordSelection:(BOOL)forceWordSelection
+               animated:(BOOL)animated
+            completion:(nullable void (^)(void))completion {
     BOOL restoresSearchFirstResponder = [[self searchController] isActiveSearchFirstResponder];
     [self setRestoresSearchFirstResponderAfterTransientContent:restoresSearchFirstResponder];
     if (restoresSearchFirstResponder) {
@@ -2584,7 +2612,7 @@ NS_ASSUME_NONNULL_END
     [self setActiveSourceContentView:sourceTableView];
     NSString *previewText =
         [([item content] ?: @"") stringByTrimmingCharactersInSet:[NSCharacterSet newlineCharacterSet]];
-    BOOL canUseWordSelection = [self swipeToSelectWords] && [[item imageName] isEqualToString:@""] &&
+    BOOL canUseWordSelection = (forceWordSelection || [self swipeToSelectWords]) && [[item imageName] isEqualToString:@""] &&
                                [[self wordSelectionViewController] canShowText:previewText];
     UIView *viewToShow = nil;
     UIView *transitionContentView = nil;
@@ -2603,6 +2631,25 @@ NS_ASSUME_NONNULL_END
     KayokoHeaderView *mainHeaderView = [[self mainView] headerView];
     [mainHeaderView setHidden:YES];
     [mainHeaderView setAlpha:1.0];
+    if (!animated) {
+        [viewToShow setHidden:NO];
+        [viewToShow setAlpha:1.0];
+        [viewToShow setTransform:CGAffineTransformIdentity];
+        [transitionContentView setHidden:NO];
+        [transitionContentView setAlpha:1.0];
+        [transitionContentView setTransform:CGAffineTransformIdentity];
+        [sourceTableView setHidden:YES];
+        [sourceTableView setAlpha:0.0];
+        [sourceTableView setTransform:CGAffineTransformIdentity];
+        [[self mainView] setAnimating:NO];
+        if (restoresSearchFirstResponder) {
+            [[self searchController] resignSearchFirstResponder];
+        }
+        if (completion) {
+            completion();
+        }
+        return;
+    }
     [[self mainView] showContentView:viewToShow
                    transitioningView:transitionContentView
                      hideContentView:sourceTableView
@@ -2612,6 +2659,9 @@ NS_ASSUME_NONNULL_END
                           completion:^{
                             if (restoresSearchFirstResponder) {
                                 [[self searchController] resignSearchFirstResponder];
+                            }
+                            if (completion) {
+                                completion();
                             }
                           }];
     [[self panelPresentationController] triggerHapticFeedbackWithStyle:UIImpactFeedbackStyleMedium];
@@ -2761,6 +2811,15 @@ NS_ASSUME_NONNULL_END
 }
 
 - (void)show {
+    [self showWithInitialContentItem:nil completion:nil];
+}
+
+- (void)showWithCompletion:(nullable void (^)(void))completion {
+    [self showWithInitialContentItem:nil completion:completion];
+}
+
+- (void)showWithInitialContentItem:(nullable KayokoPasteboardItem *)contentItem
+                        completion:(nullable void (^)(void))completion {
     if ([[self panelPresentationController] isAnimating] || [self preparingToShow]) {
         return;
     }
@@ -2802,10 +2861,27 @@ NS_ASSUME_NONNULL_END
                               [self setHistoryContentVisibleForKey:historyKey];
                               [[self searchController] attachToListViewController:[self activeListViewController]
                                                                    hidesSearchBar:YES];
+                              if (contentItem) {
+                                  [self showContentForItem:contentItem
+                                      forceWordSelection:YES
+                                                 animated:NO
+                                              completion:nil];
+                              }
                               [[self panelPresentationController] showPanelWithCompletion:^{
                                 [self executePendingExternalHideRequestIfReady];
+                                if (completion) {
+                                    completion();
+                                }
                               }];
                             }];
+}
+
+- (void)showQuickPreviewForItem:(KayokoPasteboardItem *)item {
+    if (!item || [self isEditingAnyContent] || ![self isHidden]) {
+        return;
+    }
+
+    [self showWithInitialContentItem:item completion:nil];
 }
 
 #pragma mark - Hiding

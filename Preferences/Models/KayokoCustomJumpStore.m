@@ -12,6 +12,7 @@ NSString *const kKayokoCustomJumpStoreErrorDomain = @"com.mlgm.kayoko.custom-jum
 
 static NSString *const kKayokoCustomJumpStoreDataDirectoryPath = @"/var/mobile/Library/com.mlgm.kayoko";
 static NSString *const kKayokoCustomJumpStoreFileName = @"custom-jumps-v1.plist";
+static NSString *const kKayokoImageActionStoreFileName = @"image-actions-v1.plist";
 
 @interface KayokoCustomJumpStore ()
 @property(nonatomic, copy, readwrite) NSString *jumpsPath;
@@ -21,6 +22,10 @@ static NSString *const kKayokoCustomJumpStoreFileName = @"custom-jumps-v1.plist"
 
 + (NSString *)defaultJumpsPath {
     return [jbroot(kKayokoCustomJumpStoreDataDirectoryPath) stringByAppendingPathComponent:kKayokoCustomJumpStoreFileName];
+}
+
++ (NSString *)defaultImageActionsPath {
+    return [jbroot(kKayokoCustomJumpStoreDataDirectoryPath) stringByAppendingPathComponent:kKayokoImageActionStoreFileName];
 }
 
 - (instancetype)initWithJumpsPath:(NSString *)jumpsPath {

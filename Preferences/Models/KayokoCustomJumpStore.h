@@ -16,6 +16,7 @@ extern NSString *const kKayokoCustomJumpStoreErrorDomain;
 @property(nonatomic, copy, readonly) NSString *jumpsPath;
 
 + (NSString *)defaultJumpsPath;
++ (NSString *)defaultImageActionsPath;
 - (instancetype)initWithJumpsPath:(NSString *)jumpsPath NS_DESIGNATED_INITIALIZER;
 - (instancetype)init NS_UNAVAILABLE;
 

@@ -52,10 +52,15 @@
     ]];
 }
 
-- (void)configureWithJump:(KayokoCustomJump *)jump {
+- (void)configureWithJump:(KayokoCustomJump *)jump editing:(BOOL)editing {
     [[self titleLabel] setText:[jump title]];
     [[self linkLabel] setText:[jump link]];
-    [self setAccessoryType:UITableViewCellAccessoryDisclosureIndicator];
+    [self setAccessoryType:editing ? UITableViewCellAccessoryNone : UITableViewCellAccessoryDisclosureIndicator];
+}
+
+- (void)setEditing:(BOOL)editing animated:(BOOL)animated {
+    [super setEditing:editing animated:animated];
+    [self setAccessoryType:editing ? UITableViewCellAccessoryNone : UITableViewCellAccessoryDisclosureIndicator];
 }
 
 @end

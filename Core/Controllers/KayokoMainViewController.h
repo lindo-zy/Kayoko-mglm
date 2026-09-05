@@ -11,6 +11,7 @@
 NS_ASSUME_NONNULL_BEGIN
 
 @class KayokoMainViewController;
+@class KayokoPasteboardItem;
 
 @protocol KayokoMainViewControllerDelegate <NSObject>
 
@@ -47,8 +48,11 @@ NS_ASSUME_NONNULL_BEGIN
 - (BOOL)isFullscreenSearchActive;
 - (BOOL)isNoteEditing;
 - (BOOL)isPreviewTextEditing;
+- (BOOL)isEditingAnyContent;
 - (BOOL)shouldSuppressSystemMultitaskingGesture;
 - (void)show;
+- (void)showWithCompletion:(nullable void (^)(void))completion;
+- (void)showQuickPreviewForItem:(KayokoPasteboardItem *)item;
 - (void)hide;
 - (void)hideRestoringFocus;
 - (void)hideWithStandardDismissAnimation;

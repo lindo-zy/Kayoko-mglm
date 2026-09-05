@@ -14,7 +14,9 @@
 "Automatically Paste" = "Automatically Paste";
 "Behaviors" = "Behaviors";
 "CUSTOM_TAGS" = "Custom Tags…";
-"CUSTOM_JUMPS" = "Custom Jumps…";
+"CUSTOM_JUMPS" = "Text Actions…";
+"IMAGE_ACTIONS" = "Image Actions…";
+"IMAGE_DOUBLE_TAP_ACTION" = "Image Double-Tap Action…";
 "Cancel" = "Cancel";
 "Choose how much text each clipboard item shows in the list. More lines make items easier to identify, but show fewer items at once." = "Choose how much text each clipboard item shows in the list. More lines make items easier to identify, but show fewer items at once.";
 "Choose when a tapped item moves to the top. “History Only” keeps Favorites in your chosen order while still surfacing recently used history items." = "Choose when a tapped item moves to the top. “History Only” keeps Favorites in your chosen order while still surfacing recently used history items.";
@@ -58,6 +60,7 @@
 "Preview Lines" = "Preview Lines";
 "Previous" = "Previous";
 "Privacy Mode" = "Privacy Mode";
+"Quick Preview" = "Quick Preview";
 "Purchase Kayoko on Havoc Marketplace to support ongoing OwnGoal Studio maintenance." = "Purchase Kayoko on Havoc Marketplace to support ongoing OwnGoal Studio maintenance.";
 "Respring" = "Respring";
 "Respring Now" = "Respring Now";

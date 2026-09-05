@@ -49,6 +49,7 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)setEditButtonEnabled:(BOOL)enabled;
 - (void)resetWordSelectionState;
 - (void)updateActionButtonState;
+- (void)handleTextActionButtonPressed;
 - (void)scrollToTopAnimated:(BOOL)animated;
 
 @end

@@ -10,6 +10,7 @@
 #import "KayokoNotificationKeys.h"
 #import "KayokoPanelPresentationMode.h"
 #import "KayokoPasteboardManager.h"
+#import "KayokoPasteboardItem.h"
 #import "KayokoPreferenceKeys.h"
 
 #import <AVFoundation/AVFoundation.h>
@@ -173,6 +174,7 @@ NS_ASSUME_NONNULL_BEGIN
 @property(nonatomic, assign, readwrite, getter=isEnabled) BOOL enabled;
 @property(nonatomic, assign, readwrite) NSUInteger activationMethod;
 @property(nonatomic, assign) BOOL privacyMode;
+@property(nonatomic, assign) BOOL quickPreview;
 @property(nonatomic, assign, readwrite) KayokoGestureRecognizerMode gestureRecognizerMode;
 @property(nonatomic, assign, readwrite) BOOL pasteTipsDisabled;
 
@@ -229,6 +231,7 @@ NS_ASSUME_NONNULL_BEGIN
 - (BOOL)preparePanelHostForPresentationMode:(KayokoPanelPresentationMode)presentationMode;
 - (CGRect)fullscreenPanelFrameInWindow:(nullable UIWindow *)window;
 - (KayokoPanelPresentationMode)currentPresentationMode;
+- (void)showQuickPreviewForItem:(KayokoPasteboardItem *)item;
 
 @end
 
@@ -657,6 +660,8 @@ NS_ASSUME_NONNULL_END
         kKayokoPreferenceKeyEnabled : @(kKayokoPreferenceKeyEnabledDefaultValue),
         kKayokoPreferenceKeyActivationMethod : @(kKayokoPreferenceKeyActivationMethodDefaultValue),
         kKayokoPreferenceKeyPrivacyMode : @(kKayokoPreferenceKeyPrivacyModeDefaultValue),
+        kKayokoPreferenceKeyQuickPreview : @(kKayokoPreferenceKeyQuickPreviewDefaultValue),
+        kKayokoPreferenceKeyImageDoubleTapActionURL : kKayokoPreferenceKeyImageDoubleTapActionURLDefaultValue,
         kKayokoPreferenceKeyGestureRecognizerMode : @(kKayokoPreferenceKeyGestureRecognizerModeDefaultValue),
         kKayokoPreferenceKeyMaximumHistoryAmount : @(kKayokoPreferenceKeyMaximumHistoryAmountDefaultValue),
         kKayokoPreferenceKeySaveText : @(kKayokoPreferenceKeySaveTextDefaultValue),
@@ -684,6 +689,7 @@ NS_ASSUME_NONNULL_END
     [self readPasteTipPreferencesFromPreferences:self.preferences];
     self.activationMethod = [[self.preferences objectForKey:kKayokoPreferenceKeyActivationMethod] unsignedIntegerValue];
     self.privacyMode = [[self.preferences objectForKey:kKayokoPreferenceKeyPrivacyMode] boolValue];
+    self.quickPreview = [[self.preferences objectForKey:kKayokoPreferenceKeyQuickPreview] boolValue];
     self.gestureRecognizerMode =
         [[self.preferences objectForKey:kKayokoPreferenceKeyGestureRecognizerMode] unsignedIntegerValue];
     if (self.gestureRecognizerMode != kKayokoGestureRecognizerModeClassic &&
@@ -1063,6 +1069,13 @@ NS_ASSUME_NONNULL_END
           return;
       }
 
+      if (self.quickPreview && self.enabled && self.mainViewController && ![self.mainViewController isEditingAnyContent]) {
+          KayokoPasteboardItem *latestItem = [[KayokoPasteboardManager sharedInstance] getLatestHistoryItem];
+          if (latestItem) {
+              [self showQuickPreviewForItem:latestItem];
+          }
+      }
+
       NSTimeInterval now = CACurrentMediaTime();
       if (fabs(now - self.lastCopyFeedbackOccurred) < kKayokoMinimumFeedbackInterval) {
           return;
@@ -1074,6 +1087,29 @@ NS_ASSUME_NONNULL_END
       }
       [self playSuccessHapticFeedbackIfNeeded];
     }];
+}
+
+- (void)showQuickPreviewForItem:(KayokoPasteboardItem *)item {
+    if (!item || [self isPackageMaintenanceMode] || !self.mainViewController || ![self.mainViewController isHidden]) {
+        return;
+    }
+
+    BOOL locked = NO;
+    if ([self readUILocked:&locked] && locked) {
+        [self playFailureHapticFeedbackIfNeeded];
+        return;
+    }
+
+    KayokoPanelPresentationMode presentationMode = [self currentPresentationMode];
+    if (![self preparePanelHostForPresentationMode:presentationMode]) {
+        [self playFailureHapticFeedbackIfNeeded];
+        return;
+    }
+
+    [self applyHeightPreferenceToViewApplyingWhenHidden:YES];
+    [self.mainViewController applyUserInterfaceStyle:UIUserInterfaceStyleUnspecified];
+    [self applyCurrentKeyboardHostUserInterfaceStyle];
+    [self.mainViewController showQuickPreviewForItem:item];
 }
 
 #pragma mark - Visibility

@@ -11,11 +11,16 @@
 #import "KayokoHistoryItemActionHandler.h"
 #import "KayokoPasteboardItem.h"
 #import "KayokoPasteboardManager.h"
+#import "KayokoPreferenceKeys.h"
 #import "KayokoPreviewView.h"
+
+#import <roothide.h>
 
 static NSString *kayokoPreviewTextByTrimmingBoundaryNewlines(NSString *text) {
     return [(text ?: @"") stringByTrimmingCharactersInSet:[NSCharacterSet newlineCharacterSet]];
 }
+
+static NSString *const kKayokoImageActionStorePath = @"/var/mobile/Library/com.mlgm.kayoko/image-actions-v1.plist";
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -30,8 +35,8 @@ NS_ASSUME_NONNULL_BEGIN
 @property(nonatomic, strong, nullable, readwrite) KayokoPasteboardItem *previewItem;
 @property(nonatomic, strong) KayokoHistoryItemActionHandler *actionHandler;
 @property(nonatomic, strong) KayokoActivitySharePresenter *activitySharePresenter;
-@property(nonatomic, strong, nullable) UILabel *piiicoToastLabel;
-@property(nonatomic, assign) NSUInteger piiicoToastRequestIdentifier;
+@property(nonatomic, strong, nullable) UILabel *actionFailureToastLabel;
+@property(nonatomic, assign) NSUInteger actionFailureToastRequestIdentifier;
 
 - (NSString *)actionImageNameForItem:(KayokoPasteboardItem *)item;
 - (NSString *)actionAccessibilityLabelKeyForItem:(KayokoPasteboardItem *)item;
@@ -40,8 +45,11 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)configureEditButton;
 - (void)setEditButtonHidden:(BOOL)hidden;
 - (void)handleEditButtonPressed;
-- (void)handlePencilTipButtonPressed;
-- (void)showPiiicoUnavailableToast;
+- (void)handleImageActionButtonPressed;
+- (void)handleImageDoubleTapGesture:(UITapGestureRecognizer *)gestureRecognizer;
+- (NSArray<NSDictionary<NSString *, id> *> *)loadImageActions;
+- (void)openImageAction:(NSDictionary<NSString *, id> *)action;
+- (void)showActionFailureToast;
 @end
 
 NS_ASSUME_NONNULL_END
@@ -69,8 +77,15 @@ NS_ASSUME_NONNULL_END
             forControlEvents:UIControlEventTouchUpInside];
         [[[_previewView headerView] alternateTrailingButton]
                    addTarget:self
-                      action:@selector(handlePencilTipButtonPressed)
+                      action:@selector(handleImageActionButtonPressed)
             forControlEvents:UIControlEventTouchUpInside];
+        UIImageView *imageView = [_previewView imageView];
+        [imageView setUserInteractionEnabled:YES];
+        UITapGestureRecognizer *doubleTapGestureRecognizer =
+            [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(handleImageDoubleTapGesture:)];
+        [doubleTapGestureRecognizer setNumberOfTapsRequired:2];
+        [doubleTapGestureRecognizer setCancelsTouchesInView:NO];
+        [imageView addGestureRecognizer:doubleTapGestureRecognizer];
         [self setView:_previewView];
     }
     return self;
@@ -239,19 +254,73 @@ NS_ASSUME_NONNULL_END
     [[self delegate] previewViewControllerDidRequestEdit:self];
 }
 
-- (void)handlePencilTipButtonPressed {
+- (void)handleImageActionButtonPressed {
     KayokoPasteboardItem *item = [self previewItem];
     if (!item || [[self previewView] isHidden] || [[item imageName] length] == 0) {
         return;
     }
 
-    if (![[KayokoPasteboardManager sharedInstance] copyPasteboardItemToPasteboard:item]) {
+    NSArray<NSDictionary<NSString *, id> *> *actions = [self loadImageActions];
+    if ([actions count] == 0) {
         return;
     }
 
-    NSURL *URL = [NSURL URLWithString:@"prefs://root=shellx_edit"];
+    if ([actions count] == 1) {
+        [self openImageAction:actions.firstObject];
+        return;
+    }
+
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:nil
+                                                                     message:nil
+                                                              preferredStyle:UIAlertControllerStyleActionSheet];
+    for (NSDictionary<NSString *, id> *action in actions) {
+        NSDictionary<NSString *, id> *actionToOpen = [action copy];
+        [alert addAction:[UIAlertAction actionWithTitle:actionToOpen[@"title"]
+                                                   style:UIAlertActionStyleDefault
+                                                 handler:^(__unused UIAlertAction *selectedAction) {
+                                                   [self openImageAction:actionToOpen];
+                                                 }]];
+    }
+
+    NSBundle *bundle = [KayokoPasteboardManager localizationBundle];
+    NSString *cancelTitle = [bundle localizedStringForKey:@"Cancel" value:@"取消" table:@"Tweak"];
+    [alert addAction:[UIAlertAction actionWithTitle:cancelTitle style:UIAlertActionStyleCancel handler:nil]];
+
+    UIPopoverPresentationController *popover = [alert popoverPresentationController];
+    if (popover) {
+        UIView *sourceView = [[[self previewView] headerView] alternateTrailingButton];
+        [popover setSourceView:sourceView];
+        [popover setSourceRect:[sourceView bounds]];
+        [popover setPermittedArrowDirections:UIPopoverArrowDirectionAny];
+    }
+    [self presentViewController:alert animated:YES completion:nil];
+}
+
+- (void)handleImageDoubleTapGesture:(UITapGestureRecognizer *)gestureRecognizer {
+    if ([gestureRecognizer state] != UIGestureRecognizerStateEnded || [[self previewView] isHidden]) {
+        return;
+    }
+
+    KayokoPasteboardItem *item = [self previewItem];
+    if (!item || [[item imageName] length] == 0) {
+        return;
+    }
+
+    NSUserDefaults *defaults = [[NSUserDefaults alloc] initWithSuiteName:kKayokoPreferencesIdentifier];
+    NSString *link = [[defaults stringForKey:kKayokoPreferenceKeyImageDoubleTapActionURL]
+        stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+    if ([link length] == 0) {
+        return;
+    }
+
+    if (![[KayokoPasteboardManager sharedInstance] copyPasteboardItemToPasteboard:item]) {
+        [self showActionFailureToast];
+        return;
+    }
+
+    NSURL *URL = [NSURL URLWithString:link];
     if (!URL) {
-        [self showPiiicoUnavailableToast];
+        [self showActionFailureToast];
         return;
     }
 
@@ -263,16 +332,82 @@ NS_ASSUME_NONNULL_END
                                    return;
                                }
                                dispatch_async(dispatch_get_main_queue(), ^{
-                                 [weakSelf showPiiicoUnavailableToast];
+                                 [weakSelf showActionFailureToast];
                                });
                              }];
 }
 
-- (void)showPiiicoUnavailableToast {
-    NSUInteger requestIdentifier = [self piiicoToastRequestIdentifier] + 1;
-    [self setPiiicoToastRequestIdentifier:requestIdentifier];
+- (NSArray<NSDictionary<NSString *, id> *> *)loadImageActions {
+    NSData *data = [NSData dataWithContentsOfFile:jbroot(kKayokoImageActionStorePath)];
+    if (!data) {
+        return @[];
+    }
 
-    UILabel *toastLabel = [self piiicoToastLabel];
+    NSPropertyListFormat format = NSPropertyListXMLFormat_v1_0;
+    id propertyList = [NSPropertyListSerialization propertyListWithData:data
+                                                                  options:NSPropertyListImmutable
+                                                                   format:&format
+                                                                    error:nil];
+    if (![propertyList isKindOfClass:[NSArray class]]) {
+        return @[];
+    }
+
+    NSMutableArray<NSDictionary<NSString *, id> *> *actions = [[NSMutableArray alloc] init];
+    for (id item in (NSArray *)propertyList) {
+        if (![item isKindOfClass:[NSDictionary class]]) {
+            continue;
+        }
+        NSString *title = item[@"title"];
+        NSString *link = item[@"link"];
+        if (![title isKindOfClass:[NSString class]] || ![link isKindOfClass:[NSString class]] || [title length] == 0) {
+            continue;
+        }
+        [actions addObject:@{ @"title" : title, @"link" : link }];
+    }
+    return [actions copy];
+}
+
+- (void)openImageAction:(NSDictionary<NSString *, id> *)action {
+    KayokoPasteboardItem *item = [self previewItem];
+    if (!item || [[item imageName] length] == 0 ||
+        ![[KayokoPasteboardManager sharedInstance] copyPasteboardItemToPasteboard:item]) {
+        return;
+    }
+
+    NSString *link = action[@"link"];
+    if (![link isKindOfClass:[NSString class]]) {
+        [self showActionFailureToast];
+        return;
+    }
+    link = [link stringByReplacingOccurrencesOfString:@"$$$" withString:@""];
+    if ([link length] == 0) {
+        [self showActionFailureToast];
+        return;
+    }
+    NSURL *URL = [NSURL URLWithString:link];
+    if (!URL) {
+        [self showActionFailureToast];
+        return;
+    }
+
+    __weak typeof(self) weakSelf = self;
+    [[UIApplication sharedApplication] openURL:URL
+                                       options:@{}
+                             completionHandler:^(BOOL success) {
+                               if (success) {
+                                   return;
+                               }
+                               dispatch_async(dispatch_get_main_queue(), ^{
+                                 [weakSelf showActionFailureToast];
+                               });
+                             }];
+}
+
+- (void)showActionFailureToast {
+    NSUInteger requestIdentifier = [self actionFailureToastRequestIdentifier] + 1;
+    [self setActionFailureToastRequestIdentifier:requestIdentifier];
+
+    UILabel *toastLabel = [self actionFailureToastLabel];
     if (!toastLabel) {
         toastLabel = [[UILabel alloc] init];
         [toastLabel setTranslatesAutoresizingMaskIntoConstraints:NO];
@@ -280,7 +415,7 @@ NS_ASSUME_NONNULL_END
         [toastLabel setTextColor:[UIColor whiteColor]];
         [toastLabel setFont:[UIFont systemFontOfSize:14 weight:UIFontWeightMedium]];
         [toastLabel setBackgroundColor:[UIColor colorWithWhite:0 alpha:0.78]];
-        [toastLabel.layer setCornerRadius:10];
+        [[toastLabel layer] setCornerRadius:10];
         [toastLabel setClipsToBounds:YES];
         [toastLabel setUserInteractionEnabled:NO];
         [[self view] addSubview:toastLabel];
@@ -291,10 +426,10 @@ NS_ASSUME_NONNULL_END
             [[toastLabel trailingAnchor] constraintLessThanOrEqualToAnchor:[[self view] trailingAnchor] constant:-24],
             [[toastLabel heightAnchor] constraintGreaterThanOrEqualToConstant:36]
         ]];
-        [self setPiiicoToastLabel:toastLabel];
+        [self setActionFailureToastLabel:toastLabel];
     }
 
-    [toastLabel setText:@"跳转链接失败"];
+    [toastLabel setText:@"链接跳转失败，请检查链接!"];
     [toastLabel setAlpha:0.0];
     [toastLabel setHidden:NO];
     [[self view] bringSubviewToFront:toastLabel];
@@ -303,10 +438,10 @@ NS_ASSUME_NONNULL_END
     }];
 
     __weak typeof(self) weakSelf = self;
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)),
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.0 * NSEC_PER_SEC)),
                    dispatch_get_main_queue(), ^{
                      __strong typeof(weakSelf) strongSelf = weakSelf;
-                     if (!strongSelf || [strongSelf piiicoToastRequestIdentifier] != requestIdentifier) {
+                     if (!strongSelf || [strongSelf actionFailureToastRequestIdentifier] != requestIdentifier) {
                          return;
                      }
                      [UIView animateWithDuration:0.12
@@ -314,7 +449,7 @@ NS_ASSUME_NONNULL_END
                            [toastLabel setAlpha:0.0];
                          }
                          completion:^(__unused BOOL finished) {
-                           if ([strongSelf piiicoToastRequestIdentifier] == requestIdentifier) {
+                           if ([strongSelf actionFailureToastRequestIdentifier] == requestIdentifier) {
                                [toastLabel setHidden:YES];
                            }
                          }];
@@ -361,12 +496,13 @@ NS_ASSUME_NONNULL_END
 #pragma mark - Dismissal
 
 - (void)hidePreview {
+    [self setActionFailureToastRequestIdentifier:[self actionFailureToastRequestIdentifier] + 1];
+    [[self actionFailureToastLabel] setHidden:YES];
     [[self activitySharePresenter] dismissActivityAnimated:NO];
     [[[[self previewView] headerView] shareButton] setHidden:YES];
     [[[[self previewView] headerView] alternateTrailingButton] setHidden:YES];
     [self setEditButtonHidden:YES];
     [[self previewView] setUserInteractionEnabled:YES];
-    [[self piiicoToastLabel] setHidden:YES];
     [self setPreviewItem:nil];
 
     [[self previewView] reset];
@@ -374,6 +510,8 @@ NS_ASSUME_NONNULL_END
 }
 
 - (void)resetPreviewState {
+    [self setActionFailureToastRequestIdentifier:[self actionFailureToastRequestIdentifier] + 1];
+    [[self actionFailureToastLabel] setHidden:YES];
     [[self activitySharePresenter] dismissActivityAnimated:NO];
     [[self previewView] reset];
     [[self previewView] setHidden:YES];
@@ -381,7 +519,6 @@ NS_ASSUME_NONNULL_END
     [[[[self previewView] headerView] shareButton] setHidden:YES];
     [[[[self previewView] headerView] alternateTrailingButton] setHidden:YES];
     [self setEditButtonHidden:YES];
-    [[self piiicoToastLabel] setHidden:YES];
     [self setPreviewItem:nil];
     [self setSourceHistoryKey:nil];
 }

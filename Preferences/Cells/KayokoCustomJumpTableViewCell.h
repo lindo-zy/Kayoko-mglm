@@ -11,7 +11,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 @interface KayokoCustomJumpTableViewCell : UITableViewCell
 
-- (void)configureWithJump:(KayokoCustomJump *)jump;
+- (void)configureWithJump:(KayokoCustomJump *)jump editing:(BOOL)editing;
 
 @end
 

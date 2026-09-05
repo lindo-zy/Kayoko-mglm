@@ -13,7 +13,10 @@
 #import "KayokoSystemTranslationPresenter.h"
 #import "KayokoWordSelectionView.h"
 
+#import <roothide.h>
+
 static NSUInteger const kKayokoWordSelectionMaximumTextLength = 5000;
+static NSString *const kKayokoTextActionStorePath = @"/var/mobile/Library/com.mlgm.kayoko/custom-jumps-v1.plist";
 
 static NSString *kayokoWordSelectionTextByTrimmingBoundaryNewlines(NSString *text) {
     return [(text ?: @"") stringByTrimmingCharactersInSet:[NSCharacterSet newlineCharacterSet]];
@@ -33,6 +36,12 @@ NS_ASSUME_NONNULL_BEGIN
 @property(nonatomic, strong) KayokoSystemTranslationPresenter *systemTranslationPresenter;
 @property(nonatomic, strong) KayokoActivitySharePresenter *activitySharePresenter;
 @property(nonatomic, assign) BOOL usesSelectionOrderForSelectedText;
+@property(nonatomic, strong, nullable) UILabel *actionFailureToastLabel;
+@property(nonatomic, assign) NSUInteger actionFailureToastRequestIdentifier;
+- (NSArray<NSDictionary<NSString *, id> *> *)loadTextActions;
+- (void)openTextAction:(NSDictionary<NSString *, id> *)action;
+- (NSString *)percentEncodedActionValue:(NSString *)value;
+- (void)showActionFailureToast;
 @end
 
 NS_ASSUME_NONNULL_END
@@ -128,7 +137,11 @@ NS_ASSUME_NONNULL_END
     KayokoHeaderView *headerView = [[self wordSelectionView] headerView];
     [headerView setHidden:NO];
     [headerView setHistorySwitcherVisible:NO animated:NO];
-    [headerView setTitleImageName:@"link.badge.plus" accessibilityLabel:[self name]];
+    NSString *textActionsTitle = [[KayokoPasteboardManager localizationBundle]
+        localizedStringForKey:@"Text Actions"
+                        value:@"文本动作"
+                        table:@"Tweak"];
+    [headerView setTitleImageName:@"link.badge.plus" accessibilityLabel:textActionsTitle];
     [headerView updateStyleForButton:[headerView leadingButton]
                        withImageName:@"arrowshape.turn.up.backward"
                            imageSize:kKayokoFavoritesButtonImageSize
@@ -265,6 +278,8 @@ NS_ASSUME_NONNULL_END
 }
 
 - (void)resetWordSelectionState {
+    [self setActionFailureToastRequestIdentifier:[self actionFailureToastRequestIdentifier] + 1];
+    [[self actionFailureToastLabel] setHidden:YES];
     [[self systemTranslationPresenter] dismissTranslationAnimated:NO];
     [[self activitySharePresenter] dismissActivityAnimated:NO];
     [[[[self wordSelectionView] headerView] translationButton] setHidden:YES];
@@ -336,6 +351,172 @@ NS_ASSUME_NONNULL_END
     BOOL enabled = [self hasSelectedText];
     [shareButton setEnabled:enabled];
     [shareButton setAlpha:enabled ? 1.0 : 0.35];
+}
+
+- (void)handleTextActionButtonPressed {
+    if ([self presentedViewController] || [self isBeingDismissed]) {
+        return;
+    }
+
+    NSArray<NSDictionary<NSString *, id> *> *actions = [self loadTextActions];
+    if ([actions count] == 0) {
+        return;
+    }
+
+    if ([actions count] == 1) {
+        [self openTextAction:actions.firstObject];
+        return;
+    }
+
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:nil
+                                                                     message:nil
+                                                              preferredStyle:UIAlertControllerStyleActionSheet];
+    for (NSDictionary<NSString *, id> *action in actions) {
+        NSString *title = action[@"title"];
+        [alert addAction:[UIAlertAction actionWithTitle:title
+                                                   style:UIAlertActionStyleDefault
+                                                 handler:^(__unused UIAlertAction *selectedAction) {
+                                                   [self openTextAction:action];
+                                                 }]];
+    }
+
+    NSBundle *bundle = [KayokoPasteboardManager localizationBundle];
+    NSString *cancelTitle = [bundle localizedStringForKey:@"Cancel" value:@"取消" table:@"Tweak"];
+    [alert addAction:[UIAlertAction actionWithTitle:cancelTitle style:UIAlertActionStyleCancel handler:nil]];
+
+    UIPopoverPresentationController *popover = [alert popoverPresentationController];
+    if (popover) {
+        UIView *sourceView = [[self wordSelectionView] headerView].titleTapControl;
+        [popover setSourceView:sourceView];
+        [popover setSourceRect:[sourceView bounds]];
+        [popover setPermittedArrowDirections:UIPopoverArrowDirectionAny];
+    }
+    [self presentViewController:alert animated:YES completion:nil];
+}
+
+- (NSArray<NSDictionary<NSString *, id> *> *)loadTextActions {
+    NSData *data = [NSData dataWithContentsOfFile:jbroot(kKayokoTextActionStorePath)];
+    if (!data) {
+        return @[];
+    }
+
+    NSPropertyListFormat format = NSPropertyListXMLFormat_v1_0;
+    id propertyList = [NSPropertyListSerialization propertyListWithData:data
+                                                                  options:NSPropertyListImmutable
+                                                                   format:&format
+                                                                    error:nil];
+    if (![propertyList isKindOfClass:[NSArray class]]) {
+        return @[];
+    }
+
+    NSMutableArray<NSDictionary<NSString *, id> *> *actions = [[NSMutableArray alloc] init];
+    for (id item in (NSArray *)propertyList) {
+        if (![item isKindOfClass:[NSDictionary class]]) {
+            continue;
+        }
+        NSString *title = item[@"title"];
+        NSString *link = item[@"link"];
+        if (![title isKindOfClass:[NSString class]] || ![link isKindOfClass:[NSString class]] || [title length] == 0) {
+            continue;
+        }
+        [actions addObject:@{ @"title" : title, @"link" : link }];
+    }
+    return [actions copy];
+}
+
+- (void)openTextAction:(NSDictionary<NSString *, id> *)action {
+    NSString *link = action[@"link"];
+    if (![link isKindOfClass:[NSString class]]) {
+        [self showActionFailureToast];
+        return;
+    }
+
+    NSString *selectedText = [self selectedText] ?: @"";
+    NSString *encodedText = [self percentEncodedActionValue:selectedText];
+    link = [link stringByReplacingOccurrencesOfString:@"$$$" withString:encodedText];
+    if ([link length] == 0) {
+        [self showActionFailureToast];
+        return;
+    }
+    NSURL *URL = [NSURL URLWithString:link];
+    if (!URL) {
+        [self showActionFailureToast];
+        return;
+    }
+
+    __weak typeof(self) weakSelf = self;
+    [[UIApplication sharedApplication] openURL:URL
+                                       options:@{}
+                             completionHandler:^(BOOL success) {
+                               if (success) {
+                                   return;
+                               }
+                               dispatch_async(dispatch_get_main_queue(), ^{
+                                 [weakSelf showActionFailureToast];
+                               });
+                             }];
+}
+
+- (NSString *)percentEncodedActionValue:(NSString *)value {
+    NSMutableCharacterSet *allowedCharacters = [[NSCharacterSet alphanumericCharacterSet] mutableCopy];
+    [allowedCharacters addCharactersInRange:NSMakeRange('-', 1)];
+    [allowedCharacters addCharactersInRange:NSMakeRange('.', 1)];
+    [allowedCharacters addCharactersInRange:NSMakeRange('_', 1)];
+    [allowedCharacters addCharactersInRange:NSMakeRange('~', 1)];
+    return [value stringByAddingPercentEncodingWithAllowedCharacters:allowedCharacters] ?: @"";
+}
+
+- (void)showActionFailureToast {
+    NSUInteger requestIdentifier = [self actionFailureToastRequestIdentifier] + 1;
+    [self setActionFailureToastRequestIdentifier:requestIdentifier];
+
+    UILabel *toastLabel = [self actionFailureToastLabel];
+    if (!toastLabel) {
+        toastLabel = [[UILabel alloc] init];
+        [toastLabel setTranslatesAutoresizingMaskIntoConstraints:NO];
+        [toastLabel setTextAlignment:NSTextAlignmentCenter];
+        [toastLabel setTextColor:[UIColor whiteColor]];
+        [toastLabel setFont:[UIFont systemFontOfSize:14 weight:UIFontWeightMedium]];
+        [toastLabel setBackgroundColor:[UIColor colorWithWhite:0 alpha:0.78]];
+        [[toastLabel layer] setCornerRadius:10];
+        [toastLabel setClipsToBounds:YES];
+        [toastLabel setUserInteractionEnabled:NO];
+        [[self view] addSubview:toastLabel];
+        [NSLayoutConstraint activateConstraints:@[
+            [[toastLabel centerXAnchor] constraintEqualToAnchor:[[self view] centerXAnchor]],
+            [[toastLabel bottomAnchor] constraintEqualToAnchor:[[self view] safeAreaLayoutGuide].bottomAnchor constant:-24],
+            [[toastLabel leadingAnchor] constraintGreaterThanOrEqualToAnchor:[[self view] leadingAnchor] constant:24],
+            [[toastLabel trailingAnchor] constraintLessThanOrEqualToAnchor:[[self view] trailingAnchor] constant:-24],
+            [[toastLabel heightAnchor] constraintGreaterThanOrEqualToConstant:36]
+        ]];
+        [self setActionFailureToastLabel:toastLabel];
+    }
+
+    [toastLabel setText:@"链接跳转失败，请检查链接!"];
+    [toastLabel setAlpha:0.0];
+    [toastLabel setHidden:NO];
+    [[self view] bringSubviewToFront:toastLabel];
+    [UIView animateWithDuration:0.12 animations:^{
+      [toastLabel setAlpha:1.0];
+    }];
+
+    __weak typeof(self) weakSelf = self;
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.0 * NSEC_PER_SEC)),
+                   dispatch_get_main_queue(), ^{
+                     __strong typeof(weakSelf) strongSelf = weakSelf;
+                     if (!strongSelf || [strongSelf actionFailureToastRequestIdentifier] != requestIdentifier) {
+                         return;
+                     }
+                     [UIView animateWithDuration:0.12
+                         animations:^{
+                           [toastLabel setAlpha:0.0];
+                         }
+                         completion:^(__unused BOOL finished) {
+                           if ([strongSelf actionFailureToastRequestIdentifier] == requestIdentifier) {
+                               [toastLabel setHidden:YES];
+                           }
+                         }];
+                   });
 }
 
 - (void)updateSelectionOrderButtonState {
