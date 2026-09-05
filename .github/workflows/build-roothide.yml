@@ -130,12 +130,13 @@ jobs:
         run: |
           set -euo pipefail
           tag="${GITHUB_REF_NAME}"
+          repo="${GITHUB_REPOSITORY}"
           assets=(release-assets/*.deb)
 
-          if gh release view "${tag}" >/dev/null 2>&1; then
-            gh release upload "${tag}" "${assets[@]}" --clobber
+          if gh release view "${tag}" --repo "${repo}" >/dev/null 2>&1; then
+            gh release upload "${tag}" "${assets[@]}" --repo "${repo}" --clobber
           else
-            gh release create "${tag}" "${assets[@]}" \
+            gh release create "${tag}" "${assets[@]}" --repo "${repo}" \
               --title "Kayoko ${tag}" \
               --generate-notes
           fi
