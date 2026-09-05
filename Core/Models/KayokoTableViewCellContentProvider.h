@@ -14,6 +14,8 @@ NS_ASSUME_NONNULL_BEGIN
 
 @interface KayokoTableViewCellContentProvider : NSObject
 
+@property(nonatomic, assign) BOOL privacyMode;
+
 - (KayokoTableViewCellContent *)cellContentForItem:(KayokoPasteboardItem *)item
                                   previewLineCount:(NSUInteger)previewLineCount
                                    itemDetailsMode:(KayokoItemDetailsMode)itemDetailsMode;

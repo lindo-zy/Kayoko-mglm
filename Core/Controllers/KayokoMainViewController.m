@@ -138,6 +138,7 @@ NS_ASSUME_NONNULL_END
     self = [super initWithNibName:nil bundle:nil];
     if (self) {
         _itemDetailsMode = kKayokoPreferenceKeyItemDetailsModeDefaultValue;
+        _privacyMode = kKayokoPreferenceKeyPrivacyModeDefaultValue;
         _clearButtonMode = kKayokoPreferenceKeyClearButtonModeDefaultValue;
         _kayokoSupportedInterfaceOrientations = UIInterfaceOrientationMaskAll;
         [[NSNotificationCenter defaultCenter] addObserver:self
@@ -341,6 +342,12 @@ NS_ASSUME_NONNULL_END
     _previewLineCount = previewLineCount;
     [[self historyListViewController] setPreviewLineCount:previewLineCount];
     [[self favoritesListViewController] setPreviewLineCount:previewLineCount];
+}
+
+- (void)setPrivacyMode:(BOOL)privacyMode {
+    _privacyMode = privacyMode;
+    [[self historyListViewController] setPrivacyMode:privacyMode];
+    [[self favoritesListViewController] setPrivacyMode:privacyMode];
 }
 
 - (void)setItemDetailsMode:(KayokoItemDetailsMode)itemDetailsMode {

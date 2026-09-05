@@ -11,6 +11,8 @@
 #import "KayokoTag.h"
 #import "KayokoTagCatalog.h"
 
+#import <stdint.h>
+
 NS_ASSUME_NONNULL_BEGIN
 
 @interface KayokoTableViewCellContentProvider ()
@@ -102,6 +104,45 @@ NS_ASSUME_NONNULL_END
     return attributedText;
 }
 
+- (NSString *)privacyMaskedText:(NSString *)text {
+    if (![self privacyMode] || [text length] == 0) {
+        return text;
+    }
+
+    NSMutableArray<NSValue *> *rangesToMask = [[NSMutableArray alloc] init];
+    NSData *textData = [text dataUsingEncoding:NSUTF8StringEncoding];
+    const uint8_t *textBytes = [textData bytes];
+    NSUInteger textByteLength = [textData length];
+    uint32_t textHash = 2166136261u;
+    for (NSUInteger byteIndex = 0; byteIndex < textByteLength; byteIndex++) {
+        textHash ^= textBytes[byteIndex];
+        textHash *= 16777619u;
+    }
+    __block NSUInteger composedCharacterIndex = 0;
+    [text enumerateSubstringsInRange:NSMakeRange(0, [text length])
+                             options:NSStringEnumerationByComposedCharacterSequences
+                          usingBlock:^(NSString *substring, NSRange substringRange, __unused NSRange enclosingRange,
+                                       __unused BOOL *stop) {
+                            BOOL isWhitespace = [substring rangeOfCharacterFromSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]]
+                                                        .location != NSNotFound;
+                            if (!isWhitespace) {
+                                uint32_t hash = textHash;
+                                hash ^= (uint32_t)composedCharacterIndex;
+                                hash *= 16777619u;
+                                if ((hash % 5u) == 0u) {
+                                    [rangesToMask addObject:[NSValue valueWithRange:substringRange]];
+                                }
+                            }
+                            composedCharacterIndex++;
+                          }];
+
+    NSMutableString *maskedText = [text mutableCopy];
+    for (NSValue *rangeValue in [rangesToMask reverseObjectEnumerator]) {
+        [maskedText replaceCharactersInRange:[rangeValue rangeValue] withString:@"*"];
+    }
+    return maskedText;
+}
+
 - (KayokoTableViewCellContent *)cellContentForItem:(KayokoPasteboardItem *)item
                                   previewLineCount:(NSUInteger)previewLineCount
                                    itemDetailsMode:(KayokoItemDetailsMode)itemDetailsMode {
@@ -120,6 +161,7 @@ NS_ASSUME_NONNULL_END
     BOOL isImage = [[item imageName] length] > 0;
     NSString *contentText =
         isImage ? @"" : [([item content] ?: @"") stringByTrimmingCharactersInSet:[NSCharacterSet newlineCharacterSet]];
+    NSString *displayContentText = [self privacyMaskedText:contentText];
     NSString *sourceDisplayName = [[self metadataProvider] displayNameForBundleIdentifier:bundleIdentifier];
     NSString *displayName = [[item note] length] > 0 ? [item note] : sourceDisplayName;
     [content setIcon:[[self metadataProvider] iconForBundleIdentifier:bundleIdentifier]];
@@ -129,8 +171,9 @@ NS_ASSUME_NONNULL_END
                                                                : nil];
     KayokoTag *tag = [[KayokoTagCatalog sharedCatalog] tagForUUID:[item tagUUID]];
     [content setTagHexColor:[tag hexColor]];
-    [content setContentText:contentText];
-    [content setAttributedContentText:[self attributedTextForText:contentText searchText:searchText]];
+    [content setContentText:displayContentText];
+    [content setAttributedContentText:[self privacyMode] ? nil
+                                                         : [self attributedTextForText:contentText searchText:searchText]];
     BOOL showsDetail =
         isImage ? itemDetailsMode != kKayokoItemDetailsModeOff : itemDetailsMode == kKayokoItemDetailsModeAll;
     [content setShowsDetail:showsDetail];

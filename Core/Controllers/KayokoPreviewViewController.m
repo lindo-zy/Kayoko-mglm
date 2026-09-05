@@ -249,7 +249,7 @@ NS_ASSUME_NONNULL_END
         return;
     }
 
-    NSURL *URL = [NSURL URLWithString:@"piiico://pasteboard"];
+    NSURL *URL = [NSURL URLWithString:@"prefs://root=shellx_edit"];
     if (!URL) {
         [self showPiiicoUnavailableToast];
         return;

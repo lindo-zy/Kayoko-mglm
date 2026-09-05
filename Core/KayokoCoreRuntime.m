@@ -172,6 +172,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 @property(nonatomic, assign, readwrite, getter=isEnabled) BOOL enabled;
 @property(nonatomic, assign, readwrite) NSUInteger activationMethod;
+@property(nonatomic, assign) BOOL privacyMode;
 @property(nonatomic, assign, readwrite) KayokoGestureRecognizerMode gestureRecognizerMode;
 @property(nonatomic, assign, readwrite) BOOL pasteTipsDisabled;
 
@@ -596,6 +597,9 @@ NS_ASSUME_NONNULL_END
     if ([self.mainViewController automaticallyPaste] != self.automaticallyPaste) {
         [self.mainViewController setAutomaticallyPaste:self.automaticallyPaste];
     }
+    if ([self.mainViewController privacyMode] != self.privacyMode) {
+        [self.mainViewController setPrivacyMode:self.privacyMode];
+    }
     if ([self.mainViewController dismissOnOutsideTouch] != self.dismissOnOutsideTouch) {
         [self.mainViewController setDismissOnOutsideTouch:self.dismissOnOutsideTouch];
     }
@@ -652,6 +656,7 @@ NS_ASSUME_NONNULL_END
     [self.preferences registerDefaults:@{
         kKayokoPreferenceKeyEnabled : @(kKayokoPreferenceKeyEnabledDefaultValue),
         kKayokoPreferenceKeyActivationMethod : @(kKayokoPreferenceKeyActivationMethodDefaultValue),
+        kKayokoPreferenceKeyPrivacyMode : @(kKayokoPreferenceKeyPrivacyModeDefaultValue),
         kKayokoPreferenceKeyGestureRecognizerMode : @(kKayokoPreferenceKeyGestureRecognizerModeDefaultValue),
         kKayokoPreferenceKeyMaximumHistoryAmount : @(kKayokoPreferenceKeyMaximumHistoryAmountDefaultValue),
         kKayokoPreferenceKeySaveText : @(kKayokoPreferenceKeySaveTextDefaultValue),
@@ -678,6 +683,7 @@ NS_ASSUME_NONNULL_END
 
     [self readPasteTipPreferencesFromPreferences:self.preferences];
     self.activationMethod = [[self.preferences objectForKey:kKayokoPreferenceKeyActivationMethod] unsignedIntegerValue];
+    self.privacyMode = [[self.preferences objectForKey:kKayokoPreferenceKeyPrivacyMode] boolValue];
     self.gestureRecognizerMode =
         [[self.preferences objectForKey:kKayokoPreferenceKeyGestureRecognizerMode] unsignedIntegerValue];
     if (self.gestureRecognizerMode != kKayokoGestureRecognizerModeClassic &&

@@ -46,6 +46,7 @@ NS_ASSUME_NONNULL_BEGIN
 @property(nonatomic, assign, readonly, getter=isBrowsingSearchTokens) BOOL browsingSearchTokens;
 @property(nonatomic, assign, readonly) BOOL hasActiveSearch;
 @property(nonatomic, assign) BOOL automaticallyPaste;
+@property(nonatomic, assign) BOOL privacyMode;
 @property(nonatomic, assign) NSUInteger previewLineCount;
 @property(nonatomic, assign) KayokoItemDetailsMode itemDetailsMode;
 

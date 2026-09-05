@@ -64,6 +64,7 @@ static NSString *const kKayokoPreferenceKeySaveText = @"SaveText";
 static NSString *const kKayokoPreferenceKeySaveImages = @"SaveImages";
 static NSString *const kKayokoPreferenceKeySwipeToSelectWords = @"SwipeToSelectWords";
 static NSString *const kKayokoPreferenceKeyActivationMethod = @"ActivationMethod";
+static NSString *const kKayokoPreferenceKeyPrivacyMode = @"PrivacyMode";
 static NSString *const kKayokoPreferenceKeyGestureRecognizerMode = @"GestureRecognizerMode";
 static NSString *const kKayokoPreferenceKeyAutomaticallyPaste = @"AutomaticallyPaste";
 static NSString *const kKayokoPreferenceKeyAutomaticPasteMode = @"AutomaticPasteMode";
@@ -94,6 +95,7 @@ static BOOL const kKayokoPreferenceKeySaveImagesDefaultValue = YES;
 static BOOL const kKayokoPreferenceKeySwipeToSelectWordsDefaultValue = YES;
 static ActivationMethod const kKayokoPreferenceKeyActivationMethodDefaultValue =
     kActivationMethodDictationKey | kActivationMethodInputSwitcher | kActivationMethodExternalKeyboard;
+static BOOL const kKayokoPreferenceKeyPrivacyModeDefaultValue = NO;
 static KayokoGestureRecognizerMode const kKayokoPreferenceKeyGestureRecognizerModeDefaultValue =
     kKayokoGestureRecognizerModeClassic;
 static BOOL const kKayokoPreferenceKeyAutomaticallyPasteDefaultValue = YES;

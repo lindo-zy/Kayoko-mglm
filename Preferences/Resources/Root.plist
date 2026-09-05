@@ -46,6 +46,21 @@
 		</dict>
 		<dict>
 			<key>cell</key>
+			<string>PSSwitchCell</string>
+			<key>default</key>
+			<false/>
+			<key>defaults</key>
+			<string>com.mlgm.kayoko.preferences</string>
+			<key>key</key>
+			<string>PrivacyMode</string>
+			<key>label</key>
+			<string>Privacy Mode</string>
+			<key>PostNotification</key>
+			<string>com.mlgm.kayoko.preferences.reload</string>
+		</dict>
+
+		<dict>
+			<key>cell</key>
 			<string>PSLinkListCell</string>
 			<key>default</key>
 			<integer>38</integer>

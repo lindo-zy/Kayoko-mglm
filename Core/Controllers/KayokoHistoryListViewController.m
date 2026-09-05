@@ -107,6 +107,15 @@ NS_ASSUME_NONNULL_END
     return [[self tableView] previewLineCount];
 }
 
+- (void)setPrivacyMode:(BOOL)privacyMode {
+    [[self cellContentProvider] setPrivacyMode:privacyMode];
+    [self reloadTableView];
+}
+
+- (BOOL)privacyMode {
+    return [[self cellContentProvider] privacyMode];
+}
+
 - (void)setItemDetailsMode:(KayokoItemDetailsMode)itemDetailsMode {
     [[self tableView] setItemDetailsMode:itemDetailsMode];
 }
