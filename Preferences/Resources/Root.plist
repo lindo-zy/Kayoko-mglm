@@ -169,6 +169,14 @@
 			<key>label</key>
 			<string>CUSTOM_TAGS</string>
 		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSLinkCell</string>
+			<key>detail</key>
+			<string>KayokoCustomJumpManagementViewController</string>
+			<key>label</key>
+			<string>CUSTOM_JUMPS</string>
+		</dict>
 
 		<dict>
 			<key>cell</key>

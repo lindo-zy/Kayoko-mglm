@@ -110,7 +110,7 @@ NS_ASSUME_NONNULL_END
                            imageSize:kKayokoBackButtonImageSize
                            tintColor:[UIColor labelColor]];
     [headerView updateStyleForButton:[headerView alternateTrailingButton]
-                       withImageName:@"pencil.tip"
+                       withImageName:@"link.badge.plus"
                            imageSize:kKayokoBackButtonImageSize
                            tintColor:[UIColor labelColor]];
     BOOL isImageItem = [[item imageName] length] > 0;
@@ -134,8 +134,8 @@ NS_ASSUME_NONNULL_END
                                                                                             value:nil
                                                                                             table:@"Tweak"]];
     [[headerView alternateTrailingButton]
-        setAccessibilityLabel:[[KayokoPasteboardManager localizationBundle] localizedStringForKey:@"Open in piiico"
-                                                                                            value:@"打开piiico"
+        setAccessibilityLabel:[[KayokoPasteboardManager localizationBundle] localizedStringForKey:@"Open in url"
+                                                                                            value:@"打开跳转链接"
                                                                                             table:@"Tweak"]];
     [self configureEditButton];
     [self updateShareButtonState];
@@ -294,7 +294,7 @@ NS_ASSUME_NONNULL_END
         [self setPiiicoToastLabel:toastLabel];
     }
 
-    [toastLabel setText:@"需要安装piiico"];
+    [toastLabel setText:@"跳转链接失败"];
     [toastLabel setAlpha:0.0];
     [toastLabel setHidden:NO];
     [[self view] bringSubviewToFront:toastLabel];

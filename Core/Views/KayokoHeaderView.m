@@ -198,8 +198,25 @@ static CGFloat const kKayokoSegmentBottomInset = 10;
         return;
     }
 
+    [[self titleLabel] setAttributedText:nil];
     [[self titleLabel] setText:title];
     [[self titleTapControl] setAccessibilityLabel:title];
+}
+
+- (void)setTitleImageName:(NSString *)imageName accessibilityLabel:(NSString *)accessibilityLabel {
+    UIImageSymbolConfiguration *configuration =
+        [UIImageSymbolConfiguration configurationWithPointSize:26 weight:UIImageSymbolWeightMedium];
+    UIImage *image = [UIImage systemImageNamed:imageName withConfiguration:configuration];
+    if (!image) {
+        image = [UIImage systemImageNamed:@"link" withConfiguration:configuration];
+    }
+
+    NSTextAttachment *attachment = [[NSTextAttachment alloc] init];
+    [attachment setImage:[image imageWithTintColor:[UIColor labelColor] renderingMode:UIImageRenderingModeAlwaysOriginal]];
+    [attachment setBounds:CGRectMake(0, -4, 30, 30)];
+    [[self titleLabel] setText:nil];
+    [[self titleLabel] setAttributedText:[NSAttributedString attributedStringWithAttachment:attachment]];
+    [[self titleTapControl] setAccessibilityLabel:accessibilityLabel];
 }
 
 - (void)setHistorySwitcherVisible:(BOOL)historySwitcherVisible {

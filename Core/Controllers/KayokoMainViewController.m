@@ -891,7 +891,7 @@ NS_ASSUME_NONNULL_END
     }
     if (view == [[self wordSelectionViewController] view] ||
         view == [[self wordSelectionViewController] wordSelectionView]) {
-        return [[[self wordSelectionViewController] wordSelectionView].headerView.titleLabel text] ?: @"";
+        return [[self wordSelectionViewController] name] ?: @"";
     }
     return [[[[[self mainView] headerView] titleLabel] text] copy] ?: @"";
 }

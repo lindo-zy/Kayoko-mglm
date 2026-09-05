@@ -3,6 +3,7 @@ BUNDLE_NAME += KayokoPreferences
 KayokoPreferences_USE_MODULES := 0
 
 KayokoPreferences_FILES += $(wildcard Controllers/*.m Cells/*.m Utilities/*.m)
+KayokoPreferences_FILES += $(wildcard Models/*.m)
 KayokoPreferences_FILES += $(wildcard ../Shared/Tags/*.m)
 
 KayokoPreferences_CFLAGS += -fobjc-arc
@@ -11,6 +12,7 @@ KayokoPreferences_CFLAGS += -I../Preferences
 KayokoPreferences_CFLAGS += -IControllers
 KayokoPreferences_CFLAGS += -ICells
 KayokoPreferences_CFLAGS += -IUtilities
+KayokoPreferences_CFLAGS += -IModels
 KayokoPreferences_CFLAGS += -I../Shared/Tags
 
 KayokoPreferences_FRAMEWORKS += CoreGraphics

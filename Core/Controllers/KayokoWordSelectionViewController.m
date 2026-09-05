@@ -128,7 +128,7 @@ NS_ASSUME_NONNULL_END
     KayokoHeaderView *headerView = [[self wordSelectionView] headerView];
     [headerView setHidden:NO];
     [headerView setHistorySwitcherVisible:NO animated:NO];
-    [headerView setTitleText:[self name]];
+    [headerView setTitleImageName:@"link.badge.plus" accessibilityLabel:[self name]];
     [headerView updateStyleForButton:[headerView leadingButton]
                        withImageName:@"arrowshape.turn.up.backward"
                            imageSize:kKayokoFavoritesButtonImageSize

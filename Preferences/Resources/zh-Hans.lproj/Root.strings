@@ -14,6 +14,7 @@
 "Automatically Paste" = "自动粘贴";
 "Behaviors" = "行为";
 "CUSTOM_TAGS" = "自定义标签…";
+"CUSTOM_JUMPS" = "自定义跳转…";
 "Cancel" = "取消";
 "Choose how much text each clipboard item shows in the list. More lines make items easier to identify, but show fewer items at once." = "选择列表中每个剪贴板条目显示多少文字。行数越多越容易辨认内容，但同屏可见的条目会更少。";
 "Choose when a tapped item moves to the top. “History Only” keeps Favorites in your chosen order while still surfacing recently used history items." = "选择点选条目后何时将它移到顶部。“仅历史记录” 会保留收藏夹的现有顺序，同时让最近使用的历史记录浮到前面。";

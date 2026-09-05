@@ -14,6 +14,7 @@
 "Automatically Paste" = "Automatically Paste";
 "Behaviors" = "Behaviors";
 "CUSTOM_TAGS" = "Custom Tags…";
+"CUSTOM_JUMPS" = "Custom Jumps…";
 "Cancel" = "Cancel";
 "Choose how much text each clipboard item shows in the list. More lines make items easier to identify, but show fewer items at once." = "Choose how much text each clipboard item shows in the list. More lines make items easier to identify, but show fewer items at once.";
 "Choose when a tapped item moves to the top. “History Only” keeps Favorites in your chosen order while still surfacing recently used history items." = "Choose when a tapped item moves to the top. “History Only” keeps Favorites in your chosen order while still surfacing recently used history items.";

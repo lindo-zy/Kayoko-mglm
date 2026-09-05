@@ -98,10 +98,25 @@ NS_ASSUME_NONNULL_END
         _specifiers = [self loadSpecifiersFromPlistName:@"Root" target:self];
         [self configureConditionalFootersInSpecifiers:_specifiers];
         [self configureTagManagementSpecifierInSpecifiers:_specifiers];
+        [self configureCustomJumpManagementSpecifierInSpecifiers:_specifiers];
         [self updateOverlayWindowLevelSpecifierAvailability];
     }
 
     return _specifiers;
+}
+
+- (void)configureCustomJumpManagementSpecifierInSpecifiers:(NSArray<PSSpecifier *> *)specifiers {
+    NSBundle *bundle = [NSBundle bundleForClass:[self class]];
+    NSString *localizedTitle = [bundle localizedStringForKey:@"CUSTOM_JUMPS" value:nil table:@"Root"];
+    for (PSSpecifier *specifier in specifiers) {
+        NSString *detail = [specifier propertyForKey:@"detail"];
+        if (![detail isEqualToString:@"KayokoCustomJumpManagementViewController"]) {
+            continue;
+        }
+
+        [specifier setProperty:localizedTitle forKey:@"label"];
+        break;
+    }
 }
 
 - (void)configureTagManagementSpecifierInSpecifiers:(NSArray<PSSpecifier *> *)specifiers {
@@ -391,6 +406,12 @@ NS_ASSUME_NONNULL_END
             UITableViewCell *cell = [super tableView:tableView cellForRowAtIndexPath:indexPath];
             NSBundle *bundle = [NSBundle bundleForClass:[self class]];
             cell.textLabel.text = [bundle localizedStringForKey:@"Custom Tags…" value:nil table:@"Tags"];
+            return cell;
+        }
+        if ([detail isEqualToString:@"KayokoCustomJumpManagementViewController"]) {
+            UITableViewCell *cell = [super tableView:tableView cellForRowAtIndexPath:indexPath];
+            NSBundle *bundle = [NSBundle bundleForClass:[self class]];
+            cell.textLabel.text = [bundle localizedStringForKey:@"CUSTOM_JUMPS" value:nil table:@"Root"];
             return cell;
         }
     }
